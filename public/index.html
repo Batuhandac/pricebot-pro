@@ -446,10 +446,59 @@ let ACCESS_TOKEN=null,CURRENT_MODULE=null;
 const R={USD:38.5,EUR:41.8,GBP:47.2};
 let PLATS=[],PRODS=[],PRESULTS={},TCG='pokemon',CADDED=0;
 let TRACKED_PRODUCTS=[];
+let LAST_TRACKER_SEARCH=null;
+let LAST_TRACKER_MODEL_GROUPS=[];
 
 const $=id=>document.getElementById(id);
 function set(id,v){const e=$(id);if(e)e.textContent=v;}
 function fTRY(p){return p?(Math.round(p).toLocaleString('tr-TR')+'₺'):'—';}
+function escJS(v){return String(v||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,' ');}
+function titleCaseTR(v){return String(v||'').split(' ').filter(Boolean).map(w=>w.charAt(0).toLocaleUpperCase('tr-TR')+w.slice(1)).join(' ');}
+function findFirstPlatformByType(type){return (PLATS||[]).find(p=>p.type===type)||null;}
+function trackerModelKeyFromName(name='',query=''){
+  let s=String(name||'').toLowerCase();
+  const qTokens=String(query||'').toLowerCase().split(/\s+/).filter(t=>t.length>2);
+  const removable=new Set([
+    'stanley','termos','termosu','vacuum','vakumlu','mug','cup','tumbler','bardak','matara',
+    'drinkware','taşı','tasi','taşi','tasima','taşıma','resmi','orijinal','çelik','pipetli','with','ve',
+    'amazon','amazoncomtr','trendyol','hepsiburada','a101','teknosa','n11','cimri','akakce',
+    'turkiye','türkiye','official','store','satis','satış','sale'
+  ]);
+  s=s.normalize('NFKD').replace(/[\u0300-\u036f]/g,'');
+  s=s.replace(/[^a-z0-9çğıöşü\s.-]/g,' ');
+  s=s.replace(/\b\d+(?:[.,]\d+)?\s?(ml|l|lt|litre|oz|gb|tb|cm|mm|w)\b/g,' ');
+  let tokens=s.split(/\s+/).filter(Boolean).filter(t=>t.length>1 && !removable.has(t) && !qTokens.includes(t));
+  const priority=['quencher','aerolight','transit','flowstate','classic','klasik','protour','flip','carry','all','day'];
+  const picked=[];
+  for(const k of priority){ if(tokens.includes(k) && !picked.includes(k)) picked.push(k); }
+  for(const t of tokens){ if(!picked.includes(t)) picked.push(t); if(picked.length>=4) break; }
+  const key=picked.join(' ').trim();
+  return key || String(name||'').toLowerCase().replace(/\s+/g,' ').trim();
+}
+function groupTrackerSearchResults(results=[],query=''){
+  const map=new Map();
+  (results||[]).forEach((item)=>{
+    const key=trackerModelKeyFromName(item.name||query,query);
+    if(!map.has(key)){
+      map.set(key,{key,displayName:titleCaseTR(key),items:[],lowestPrice:Infinity,highestPrice:0,image:item.image||null,query:key||query});
+    }
+    const group=map.get(key);
+    group.items.push(item);
+    if(item.image && !group.image) group.image=item.image;
+    if(item.priceTRY && item.priceTRY<group.lowestPrice) group.lowestPrice=item.priceTRY;
+    if(item.priceTRY && item.priceTRY>group.highestPrice) group.highestPrice=item.priceTRY;
+  });
+  return Array.from(map.values())
+    .filter(g=>g.items.length)
+    .map(g=>({
+      ...g,
+      lowestPrice:isFinite(g.lowestPrice)?g.lowestPrice:0,
+      highestPrice:g.highestPrice||g.lowestPrice||0,
+      sourceCount:new Set(g.items.map(x=>x.source).filter(Boolean)).size,
+      sampleNames:g.items.slice(0,3).map(x=>x.name).filter(Boolean)
+    }))
+    .sort((a,b)=>(a.lowestPrice||Infinity)-(b.lowestPrice||Infinity));
+}
 function hdr(){return{'Content-Type':'application/json','Authorization':'Bearer '+ACCESS_TOKEN};}
 function openM(id){$(id).classList.remove('hidden');$(id).classList.add('flex');}
 function closeM(id){$(id).classList.add('hidden');$(id).classList.remove('flex');}
@@ -735,6 +784,99 @@ function renderTrackerTable(){
   }).join('');
 }
 
+function renderTrackerSearchGroups(query,groups){
+  const ikasPlat=findFirstPlatformByType('ikas');
+  const shopifyPlat=findFirstPlatformByType('shopify');
+  $('serpResults').innerHTML=`
+    <div class="mb-4 p-3 bg-surface-container-lowest border-l-2 border-secondary">
+      <div class="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant mb-1">Önce model seç</div>
+      <div class="text-sm text-on-surface-variant">"${query}" araması birden fazla modele dağıldı. Önce doğru modeli seç, sonra sadece o modelin rakip fiyatlarını gör.</div>
+    </div>
+    <div class="space-y-3">
+      ${groups.map((g,idx)=>`
+        <div class="p-4 bg-surface-container-high border border-outline-variant/10">
+          <div class="flex gap-4 items-start">
+            ${g.image?`<img src="${g.image}" class="w-14 h-14 object-cover bg-surface-container-lowest flex-shrink-0">`:`<div class="w-14 h-14 bg-surface-container-lowest flex items-center justify-center text-xl flex-shrink-0">🛒</div>`}
+            <div class="flex-1 min-w-0">
+              <div class="font-headline font-extrabold text-lg">${g.displayName||g.sampleNames?.[0]||query}</div>
+              <div class="text-[11px] text-on-surface-variant mt-1">${g.sampleNames.join(' • ')}</div>
+              <div class="flex flex-wrap gap-4 mt-3 text-xs">
+                <div><span class="text-on-surface-variant">En düşük:</span> <strong class="text-secondary">${fTRY(g.lowestPrice)}</strong></div>
+                <div><span class="text-on-surface-variant">En yüksek:</span> <strong>${fTRY(g.highestPrice)}</strong></div>
+                <div><span class="text-on-surface-variant">Satıcı:</span> <strong>${g.items.length}</strong></div>
+              </div>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-2 mt-4">
+            <button onclick="renderTrackerSearchGroupDetail(${idx})" class="py-3 bg-surface-container-lowest text-on-surface text-xs font-bold uppercase">Modeli İncele</button>
+            <button onclick="prefillTracker('${escJS(g.displayName||g.sampleNames?.[0]||query)}',${g.lowestPrice||0},'${escJS(g.query||g.displayName||query)}')" class="py-3 bg-secondary text-on-secondary-fixed text-xs font-bold uppercase">Takibe Al</button>
+            ${ikasPlat?`<button onclick="quickExportTrackerCandidate('${escJS(ikasPlat.id)}',${idx})" class="py-3 bg-[#00cfb4] text-[#06231f] text-xs font-bold uppercase">ikas'a aktar</button>`:`<div class="py-3 bg-surface-container-lowest text-center text-[10px] text-on-surface-variant uppercase">ikas bağlı değil</div>`}
+            ${shopifyPlat?`<button onclick="quickExportTrackerCandidate('${escJS(shopifyPlat.id)}',${idx})" class="py-3 bg-[#95bf47] text-[#0d1b05] text-xs font-bold uppercase">Shopify'a aktar</button>`:`<div class="py-3 bg-surface-container-lowest text-center text-[10px] text-on-surface-variant uppercase">Shopify bağlı değil</div>`}
+          </div>
+        </div>`).join('')}
+    </div>`;
+}
+function renderTrackerSearchGroupDetail(idx){
+  const group=LAST_TRACKER_MODEL_GROUPS[idx];
+  if(!group)return;
+  const ikasPlat=findFirstPlatformByType('ikas');
+  const shopifyPlat=findFirstPlatformByType('shopify');
+  $('serpResults').innerHTML=`
+    <div class="flex items-center justify-between gap-3 mb-4 p-3 bg-surface-container-lowest border-l-2 border-secondary">
+      <div>
+        <div class="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Seçilen model</div>
+        <div class="font-headline font-extrabold text-lg">${group.displayName||group.sampleNames?.[0]||LAST_TRACKER_SEARCH?.query||''}</div>
+      </div>
+      <button onclick="renderTrackerSearchGroups('${escJS(LAST_TRACKER_SEARCH?.query||'')}',LAST_TRACKER_MODEL_GROUPS)" class="px-4 py-2 bg-surface-container text-xs font-bold uppercase">← Modeller</button>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+      <div class="p-3 bg-surface-container-lowest border-l-2 border-secondary"><div class="text-[10px] uppercase text-on-surface-variant font-bold">En düşük</div><div class="font-headline font-extrabold text-xl text-secondary">${fTRY(group.lowestPrice)}</div></div>
+      <div class="p-3 bg-surface-container-lowest border-l-2 border-primary"><div class="text-[10px] uppercase text-on-surface-variant font-bold">En yüksek</div><div class="font-headline font-extrabold text-xl text-primary">${fTRY(group.highestPrice)}</div></div>
+      <div class="p-3 bg-surface-container-lowest border-l-2 border-tertiary"><div class="text-[10px] uppercase text-on-surface-variant font-bold">Satıcı</div><div class="font-headline font-extrabold text-xl text-tertiary">${group.items.length}</div></div>
+      <div class="p-3 bg-surface-container-lowest border-l-2 border-outline"><div class="text-[10px] uppercase text-on-surface-variant font-bold">Kaynak</div><div class="font-headline font-extrabold text-xl">${group.sourceCount}</div></div>
+    </div>
+    <div class="space-y-2">
+      ${group.items.map(r=>`
+        <div class="flex items-center gap-4 p-3 bg-surface-container-high hover:bg-surface-bright transition-colors border-l-2 ${r.priceTRY===group.lowestPrice?'border-secondary':'border-transparent'}">
+          ${r.image?`<img src="${r.image}" class="w-12 h-12 object-cover flex-shrink-0">`:'<div class="w-12 h-12 bg-surface-container-lowest flex items-center justify-center text-xl">🛒</div>'}
+          <div class="flex-1 min-w-0">
+            <div class="font-bold text-xs">${r.name}</div>
+            <div class="flex items-center gap-2 mt-1">
+              <span class="plat-badge plat-${r.platform}">${r.source}</span>
+              ${r.rating?`<span class="text-[10px] text-primary">★ ${r.rating}</span>`:''}
+              ${r.delivery?`<span class="text-[10px] text-on-surface-variant">${r.delivery}</span>`:''}
+            </div>
+          </div>
+          <div class="text-right flex-shrink-0">
+            <div class="font-headline font-extrabold text-lg ${r.priceTRY===group.lowestPrice?'text-secondary':'text-on-surface'}">${fTRY(r.priceTRY)}</div>
+            ${r.link?`<a href="${r.link}" target="_blank" class="text-[9px] text-primary hover:underline">Satıcıya git →</a>`:''}
+          </div>
+        </div>`).join('')}
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-2 mt-4">
+      <button onclick="prefillTracker('${escJS(group.displayName||group.sampleNames?.[0]||LAST_TRACKER_SEARCH?.query||'')}',${group.lowestPrice||0},'${escJS(group.query||group.displayName||LAST_TRACKER_SEARCH?.query||'')}')" class="py-3 bg-secondary text-on-secondary-fixed text-xs font-bold uppercase">Takibe Al</button>
+      ${ikasPlat?`<button onclick="quickExportTrackerCandidate('${escJS(ikasPlat.id)}',${idx})" class="py-3 bg-[#00cfb4] text-[#06231f] text-xs font-bold uppercase">ikas'a aktar</button>`:`<div class="py-3 bg-surface-container-lowest text-center text-[10px] text-on-surface-variant uppercase">ikas bağlı değil</div>`}
+      ${shopifyPlat?`<button onclick="quickExportTrackerCandidate('${escJS(shopifyPlat.id)}',${idx})" class="py-3 bg-[#95bf47] text-[#0d1b05] text-xs font-bold uppercase">Shopify'a aktar</button>`:`<div class="py-3 bg-surface-container-lowest text-center text-[10px] text-on-surface-variant uppercase">Shopify bağlı değil</div>`}
+      <button onclick="renderTrackerSearchGroups('${escJS(LAST_TRACKER_SEARCH?.query||'')}',LAST_TRACKER_MODEL_GROUPS)" class="py-3 bg-surface-container-lowest text-on-surface text-xs font-bold uppercase">Modellere dön</button>
+    </div>`;
+}
+async function quickExportTrackerCandidate(platformId,groupIdx){
+  const group=LAST_TRACKER_MODEL_GROUPS[groupIdx];
+  if(!group)return;
+  try{
+    const r=await(await fetch(API+'/api/platforms/'+platformId+'/import-tracker-product',{method:'POST',headers:hdr(),body:JSON.stringify({
+      product:{
+        id:'srch_'+Date.now(),
+        name:group.displayName||group.sampleNames?.[0]||LAST_TRACKER_SEARCH?.query||'Ürün',
+        image:group.image||null,
+        query:group.query||LAST_TRACKER_SEARCH?.query||'',
+        priceTRY:group.lowestPrice||0
+      }
+    })})).json();
+    if(r.error)throw new Error(r.error);
+    alert('Ürün platforma aktarıldı: '+fTRY(r.priceTRY||group.lowestPrice||0));
+  }catch(e){alert('Aktarım hatası: '+e.message);}
+}
 async function doSerpSearch(){
   const q=$('serpQuery').value.trim();if(!q)return;
   $('serpResults').innerHTML='<div class="py-8 text-center text-secondary text-xs animate-pulse">Google Shopping TR taranıyor...</div>';
@@ -742,38 +884,41 @@ async function doSerpSearch(){
     const d=await(await fetch(API+'/api/tracker/search',{method:'POST',headers:hdr(),body:JSON.stringify({query:q})})).json();
     if(d.error){$('serpResults').innerHTML=`<div class="py-4 text-center text-error text-sm">${d.error}</div>`;return;}
     if(!d.results?.length){$('serpResults').innerHTML='<div class="py-4 text-center text-on-surface-variant text-sm">Sonuç bulunamadı.</div>';return;}
-    
-    $('serpResults').innerHTML=`
-      <div class="flex gap-3 mb-4 p-3 bg-surface-container-lowest border-l-2 border-secondary">
-        <div><span class="text-[10px] font-bold text-on-surface-variant uppercase">En Düşük:</span> <span class="font-headline font-extrabold text-lg text-secondary">${fTRY(d.lowestPrice)}</span></div>
-        <div><span class="text-[10px] font-bold text-on-surface-variant uppercase">Ortalama:</span> <span class="font-headline font-extrabold text-lg text-primary">${fTRY(d.avgPrice)}</span></div>
-        <div><span class="text-[10px] font-bold text-on-surface-variant uppercase">Satıcı:</span> <span class="text-xs font-bold">${d.results.length}</span></div>
-      </div>
-      ${d.results.map(r=>`
-        <div class="flex items-center gap-4 p-3 bg-surface-container-high hover:bg-surface-bright transition-colors border-l-2 ${r.priceTRY===d.lowestPrice?'border-secondary':'border-transparent'}">
-          ${r.image?`<img src="${r.image}" class="w-12 h-12 object-cover flex-shrink-0">`:'<div class="w-12 h-12 bg-surface-container-lowest flex items-center justify-center text-xl">🛒</div>'}
-          <div class="flex-1 min-w-0">
-            <div class="font-bold text-xs truncate">${r.name}</div>
-            <div class="flex items-center gap-2 mt-0.5">
-              <span class="plat-badge plat-${r.platform}">${r.source}</span>
-              ${r.rating?`<span class="text-[10px] text-primary">★ ${r.rating}</span>`:''}
-              ${r.delivery?`<span class="text-[10px] text-on-surface-variant">${r.delivery}</span>`:''}
-            </div>
-          </div>
-          <div class="text-right flex-shrink-0">
-            <div class="font-headline font-extrabold text-lg ${r.priceTRY===d.lowestPrice?'text-secondary':'text-on-surface'}">${fTRY(r.priceTRY)}</div>
-            ${r.link?`<a href="${r.link}" target="_blank" class="text-[9px] text-primary hover:underline">Satıcıya git →</a>`:''}
-          </div>
-        </div>`).join('')}
-      <button onclick="prefillTracker('${q.replace(/'/g,"\\'")}',${d.lowestPrice||0})" class="mt-4 w-full py-3 bg-secondary text-on-secondary-fixed text-xs font-bold uppercase">+ Bu Ürünü Takibe Al</button>`;
+    LAST_TRACKER_SEARCH=d;
+    LAST_TRACKER_MODEL_GROUPS=groupTrackerSearchResults(d.results,q);
+    if(LAST_TRACKER_MODEL_GROUPS.length<=1){
+      renderTrackerSearchGroupDetail(0);
+      return;
+    }
+    renderTrackerSearchGroups(q,LAST_TRACKER_MODEL_GROUPS);
   }catch(e){$('serpResults').innerHTML=`<div class="py-4 text-center text-error text-sm">${e.message}</div>`;}
 }
 
-function prefillTracker(name,price){
+function prefillTracker(name,price,searchQuery){
   closeM('mTrackerSearch');
   $('trAddName').value=name;
+  $('trAddQuery').value=searchQuery||name;
   $('trAddPrice').value=Math.round(price*0.98);
   openM('mTrackerAdd');
+}
+
+async function createTrackedPlatformProduct(id){
+  try{
+    const r=await(await fetch(API+'/api/tracker/products/'+id+'/create-platform-product',{method:'POST',headers:hdr(),body:'{}'})).json();
+    if(r.error)throw new Error(r.error);
+    alert('Platform ürünü oluşturuldu. Bundan sonra fiyat push yapılabilir.');
+    loadTrackedProducts();
+    openTrackerDetail(id);
+  }catch(e){alert('Oluşturma hatası: '+e.message);}
+}
+async function pushTrackedPrice(id,price){
+  try{
+    const r=await(await fetch(API+'/api/tracker/products/'+id+'/push',{method:'POST',headers:hdr(),body:JSON.stringify({price})})).json();
+    if(r.error)throw new Error(r.error);
+    alert('Fiyat platforma gönderildi: '+fTRY(price));
+    loadTrackedProducts();
+    openTrackerDetail(id);
+  }catch(e){alert('Push hatası: '+e.message);}
 }
 
 async function addTrackedProduct(){
@@ -876,7 +1021,9 @@ async function openTrackerDetail(id){
         </div>
       </div>
       <div class="flex gap-3">
-        ${suggested?`<button onclick="alert('Platform push özelliği aktif edilmeli')" class="flex-1 py-3 bg-secondary text-on-secondary-fixed text-xs font-bold uppercase">↑ Platforma Gönder (${fTRY(suggested)})</button>`:''}
+        ${hasPlatformLink && !hasCreatedPlatformProduct ? `<button onclick="createTrackedPlatformProduct('${p.id}')" class="flex-1 py-3 bg-[#95bf47] text-[#0d1b05] text-xs font-bold uppercase">+ ${platformName} içinde ürün oluştur</button>` : ''}
+        ${hasPlatformLink && hasCreatedPlatformProduct && suggested ? `<button onclick="pushTrackedPrice('${p.id}',${suggested})" class="flex-1 py-3 bg-secondary text-on-secondary-fixed text-xs font-bold uppercase">↑ Platforma Gönder (${fTRY(suggested)})</button>` : ''}
+        ${!hasPlatformLink ? `<button onclick="closeM('mTrackerDetail');openM('mTrackerAdd')" class="flex-1 py-3 bg-surface-container text-on-surface text-xs font-bold uppercase">Önce platform bağla</button>` : ''}
         <button onclick="deleteTracked('${p.id}');closeM('mTrackerDetail')" class="px-4 py-3 border border-error text-error text-xs font-bold uppercase">Sil</button>
       </div>
     </div>`;

@@ -404,6 +404,18 @@ async function platformCreateProduct(platform,card,priceTRY) {
   if(platform.type==='shopify')return await shopifyCreateProduct(cfg,card,priceTRY);
   return null;
 }
+function buildTrackerPlatformCard(product = {}) {
+  const competitors = Array.isArray(product.last_competitors) ? product.last_competitors : [];
+  const firstImage = competitors.find(x => x && x.image)?.image || product.image || null;
+  return {
+    id: product.id || `tracker-${Date.now()}`,
+    name: product.name || product.productName || 'Ürün',
+    game: 'tracker',
+    image: firstImage,
+    set: 'Price Tracker',
+    rarity: ''
+  };
+}
 
 // ═══════════════════════════════════════════
 // ZAMANLAYICI
@@ -574,46 +586,6 @@ app.get('/api/image-proxy', async(req,res)=>{
 
 app.get('/api/auth/me', requireAuth, (req,res)=>res.json({id:req.userId,email:req.userEmail}));
 
-
-function normalizeTrackedProduct(record = {}) {
-  return {
-    ...record,
-    search_query: record.search_query ?? record.searchQuery ?? record.name ?? '',
-    our_price: Number(record.our_price ?? record.ourPrice ?? 0),
-    cost_price: Number(record.cost_price ?? record.costPrice ?? 0),
-    platform_id: record.platform_id ?? record.platformId ?? null,
-    rules: record.rules || { beatByAmount: 0.10, minMarginPercent: 5, maxDropPercent: 30 },
-    suggested_price: record.suggested_price ?? record.suggestedPrice ?? null,
-    lowest_competitor: record.lowest_competitor ?? record.lowestCompetitor ?? null,
-    last_competitors: Array.isArray(record.last_competitors) ? record.last_competitors : (Array.isArray(record.lastCompetitors) ? record.lastCompetitors : []),
-    price_history: Array.isArray(record.price_history) ? record.price_history : (Array.isArray(record.priceHistory) ? record.priceHistory : []),
-    last_scan_at: record.last_scan_at ?? record.lastScanAt ?? null,
-    competitor_count: Number(record.competitor_count ?? record.competitorCount ?? 0),
-    auto_sync: record.auto_sync ?? record.autoSync ?? false,
-    scheduler_minutes: Number(record.scheduler_minutes ?? record.schedulerMinutes ?? 60)
-  };
-}
-
-function buildTrackedProductInsertPayload(product) {
-  return {
-    id: product.id,
-    user_id: product.user_id,
-    name: product.name,
-    search_query: product.search_query,
-    our_price: product.our_price,
-    cost_price: product.cost_price,
-    platform_id: product.platform_id,
-    rules: product.rules,
-    suggested_price: product.suggested_price,
-    lowest_competitor: product.lowest_competitor,
-    last_competitors: product.last_competitors,
-    price_history: product.price_history,
-    last_scan_at: product.last_scan_at,
-    competitor_count: product.competitor_count,
-    created_at: product.created_at
-  };
-}
-
 // ═══════════════════════════════════════════
 // PRICE TRACKER API
 // ═══════════════════════════════════════════
@@ -633,19 +605,18 @@ app.post('/api/tracker/search', requireAuth, async(req, res) => {
 
 // Ürün takibe al
 app.post('/api/tracker/products', requireAuth, async(req, res) => {
-  const body = req.body || {};
-  const name = body.name || body.productName;
+  const { name, searchQuery, ourPrice, costPrice, platformId, rules } = req.body;
   if (!name) return res.status(400).json({ error: 'name gerekli' });
-
-  const product = normalizeTrackedProduct({
+  
+  const product = {
     id: `tp_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
     user_id: req.userId,
     name,
-    search_query: body.searchQuery || body.search_query || name,
-    our_price: body.ourPrice ?? body.our_price ?? 0,
-    cost_price: body.costPrice ?? body.cost_price ?? 0,
-    platform_id: body.platformId ?? body.platform_id ?? null,
-    rules: body.rules || { beatByAmount: 0.10, minMarginPercent: 5, maxDropPercent: 30 },
+    search_query: searchQuery || name,
+    our_price: ourPrice || 0,
+    cost_price: costPrice || 0,
+    platform_id: platformId || null,
+    rules: rules || { beatByAmount: 0.10, minMarginPercent: 5, maxDropPercent: 30 },
     suggested_price: null,
     lowest_competitor: null,
     last_competitors: [],
@@ -655,11 +626,11 @@ app.post('/api/tracker/products', requireAuth, async(req, res) => {
     auto_sync: false,
     scheduler_minutes: 60,
     created_at: new Date().toISOString()
-  });
+  };
   
   try {
     if (hasSupabase) {
-      await sbQuery('tracked_products', 'POST', buildTrackedProductInsertPayload(product));
+      await sbQuery('tracked_products', 'POST', product);
     } else {
       db.saveTrackedProduct(product);
     }
@@ -710,7 +681,7 @@ app.get('/api/tracker/products', requireAuth, async(req, res) => {
   try {
     let products;
     if (hasSupabase) {
-      products = (await sbQuery('tracked_products', 'GET', null, `?user_id=eq.${req.userId}&order=created_at.desc`)).map(normalizeTrackedProduct);
+      products = await sbQuery('tracked_products', 'GET', null, `?user_id=eq.${req.userId}&order=created_at.desc`);
     } else {
       products = db.getTrackedProducts(req.userId);
     }
@@ -733,7 +704,7 @@ app.get('/api/tracker/products/:id', requireAuth, async(req, res) => {
     if (hasSupabase) {
       const rows = await sbQuery('tracked_products', 'GET', null, `?id=eq.${req.params.id}&user_id=eq.${req.userId}`);
       if (!rows.length) return res.status(404).json({ error: 'Bulunamadı' });
-      p = normalizeTrackedProduct(rows[0]);
+      p = rows[0];
     } else {
       p = db.getTrackedProduct(req.params.id, req.userId);
       if (!p) return res.status(404).json({ error: 'Bulunamadı' });
@@ -747,33 +718,9 @@ app.get('/api/tracker/products/:id', requireAuth, async(req, res) => {
 // Ürünü güncelle
 app.patch('/api/tracker/products/:id', requireAuth, async(req, res) => {
   try {
-    const body = req.body || {};
-    const updates = {};
-    if ('name' in body) updates.name = body.name;
-    if ('searchQuery' in body || 'search_query' in body) updates.search_query = body.searchQuery ?? body.search_query;
-    if ('ourPrice' in body || 'our_price' in body) updates.our_price = body.ourPrice ?? body.our_price;
-    if ('costPrice' in body || 'cost_price' in body) updates.cost_price = body.costPrice ?? body.cost_price;
-    if ('platformId' in body || 'platform_id' in body) updates.platform_id = body.platformId ?? body.platform_id;
-    if ('rules' in body) updates.rules = body.rules;
-    if ('suggestedPrice' in body || 'suggested_price' in body) updates.suggested_price = body.suggestedPrice ?? body.suggested_price;
-    if ('lowestCompetitor' in body || 'lowest_competitor' in body) updates.lowest_competitor = body.lowestCompetitor ?? body.lowest_competitor;
-    if ('lastCompetitors' in body || 'last_competitors' in body) updates.last_competitors = body.lastCompetitors ?? body.last_competitors;
-    if ('priceHistory' in body || 'price_history' in body) updates.price_history = body.priceHistory ?? body.price_history;
-    if ('lastScanAt' in body || 'last_scan_at' in body) updates.last_scan_at = body.lastScanAt ?? body.last_scan_at;
-    if ('competitorCount' in body || 'competitor_count' in body) updates.competitor_count = body.competitorCount ?? body.competitor_count;
-    if ('autoSync' in body || 'auto_sync' in body) updates.auto_sync = body.autoSync ?? body.auto_sync;
-    if ('schedulerMinutes' in body || 'scheduler_minutes' in body) updates.scheduler_minutes = body.schedulerMinutes ?? body.scheduler_minutes;
-
-    if (hasSupabase) {
-      const rows = await sbQuery('tracked_products', 'GET', null, `?id=eq.${req.params.id}&user_id=eq.${req.userId}`);
-      if (!rows.length) return res.status(404).json({ error: 'Bulunamadı' });
-      const patched = normalizeTrackedProduct({ ...rows[0], ...updates });
-      await sbQuery('tracked_products', 'PATCH', updates, `?id=eq.${req.params.id}&user_id=eq.${req.userId}`);
-      return res.json({ ok: true, product: patched });
-    }
-
     const p = db.getTrackedProduct(req.params.id, req.userId);
     if (!p) return res.status(404).json({ error: 'Bulunamadı' });
+    const updates = req.body;
     Object.assign(p, updates);
     db.saveTrackedProduct(p);
     res.json({ ok: true, product: p });
@@ -804,7 +751,7 @@ app.post('/api/tracker/products/:id/scan', requireAuth, async(req, res) => {
     if (hasSupabase) {
       const rows = await sbQuery('tracked_products', 'GET', null, `?id=eq.${req.params.id}&user_id=eq.${req.userId}`);
       if (!rows.length) return res.status(404).json({ error: 'Bulunamadı' });
-      p = normalizeTrackedProduct(rows[0]);
+      p = rows[0];
     } else {
       p = db.getTrackedProduct(req.params.id, req.userId);
       if (!p) return res.status(404).json({ error: 'Bulunamadı' });
@@ -850,8 +797,8 @@ app.post('/api/tracker/products/:id/scan', requireAuth, async(req, res) => {
   }
 });
 
-// Fiyatı platforma push et
-app.post('/api/tracker/products/:id/push', requireAuth, async(req, res) => {
+// Takip ürününden platform ürünü oluştur
+app.post('/api/tracker/products/:id/create-platform-product', requireAuth, async(req, res) => {
   try {
     let p;
     if (hasSupabase) {
@@ -863,27 +810,56 @@ app.post('/api/tracker/products/:id/push', requireAuth, async(req, res) => {
       if (!p) return res.status(404).json({ error: 'Bulunamadı' });
     }
 
-    const platformId = p.platform_id ?? p.platformId;
-    if (!platformId) return res.status(400).json({ error: 'Platform bağlı değil' });
-
-    const price = req.body.price || p.suggested_price || p.suggestedPrice;
-    if (!price) return res.status(400).json({ error: 'Fiyat hesaplanmamış' });
+    const platformId = req.body?.platformId || p.platform_id || p.platformId;
+    if (!platformId) return res.status(400).json({ error: 'Önce bir platform bağlamalısınız' });
 
     const platform = await getPlatformForUser(platformId, req.userId);
-    const platformProductId = p.platform_product_id ?? p.platformProductId;
-    const platformVariantId = p.platform_variant_id ?? p.platformVariantId;
-    if (platformProductId && platformVariantId) {
-      await platformUpdatePrice(platform, { id: platformProductId, variantId: platformVariantId }, price);
-    }
+    const priceTRY = Math.max(10, Math.round(Number(req.body?.price || p.suggested_price || p.suggestedPrice || p.lowest_competitor || p.lowestCompetitor || p.our_price || p.ourPrice || 0)));
+    const card = buildTrackerPlatformCard(p);
+    const created = await platformCreateProduct(platform, card, priceTRY);
+
+    const updates = {
+      platform_id: platformId,
+      platform_product_id: created?.id || null,
+      platform_variant_id: created?.variantId || null,
+      our_price: priceTRY
+    };
 
     if (hasSupabase) {
-      await sbQuery('tracked_products', 'PATCH', { our_price: price }, `?id=eq.${req.params.id}&user_id=eq.${req.userId}`);
+      await sbQuery('tracked_products', 'PATCH', updates, `?id=eq.${req.params.id}&user_id=eq.${req.userId}`);
     } else {
-      p.our_price = price;
+      Object.assign(p, updates);
       db.saveTrackedProduct(p);
     }
 
-    addLog(platformId, 'TRACKER-PUSH', `${p.name} → ${price}₺`, 'success');
+    addLog(platformId, 'TRACKER-CREATE', `${p.name} platformda oluşturuldu`, 'success');
+    res.json({ ok: true, priceTRY, created, product: { ...p, ...updates } });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Fiyatı platforma push et
+app.post('/api/tracker/products/:id/push', requireAuth, async(req, res) => {
+  try {
+    const p = db.getTrackedProduct(req.params.id, req.userId);
+    if (!p) return res.status(404).json({ error: 'Bulunamadı' });
+    if (!p.platformId) return res.status(400).json({ error: 'Platform bağlı değil' });
+    
+    const price = req.body.price || p.suggestedPrice;
+    if (!price) return res.status(400).json({ error: 'Fiyat hesaplanmamış' });
+    
+    const platform = await getPlatformForUser(p.platformId, req.userId);
+    // Platform ürün ID'si varsa güncelle
+    if (p.platformProductId && p.platformVariantId) {
+      await platformUpdatePrice(platform, { id: p.platformProductId, variantId: p.platformVariantId }, price);
+    }
+    
+    p.ourPrice = price;
+    p.lastPushAt = new Date().toISOString();
+    db.saveTrackedProduct(p);
+    
+    addLog(p.platformId, 'TRACKER-PUSH', `${p.name} → ${price}₺`, 'success');
     res.json({ ok: true, price });
   } catch(e) {
     res.status(500).json({ error: e.message });
@@ -1004,6 +980,18 @@ app.post('/api/platforms/:id/import-sealed', requireAuth, async(req,res)=>{
     let priceTRY=product.priceUSD?Math.round(parseFloat(product.priceUSD)*ratesCache.USD*1.03*(1+st.marginAboveGlobal/100)/5)*5:0;
     if(priceTRY<10)priceTRY=10;
     const card={name:product.name,id:`pc-${product.id}`,game:product.console||'sealed',image:product.image||null,priceUSD:parseFloat(product.priceUSD||0),priceEUR:0,set:product.console||'',rarity:'Sealed'};
+    const created=await platformCreateProduct(p,card,priceTRY);
+    res.json({ok:true,priceTRY,...created});
+  }catch(e){res.status(500).json({error:e.message});}
+});
+
+app.post('/api/platforms/:id/import-tracker-product', requireAuth, async(req,res)=>{
+  try{
+    const p=await getPlatformForUser(req.params.id,req.userId);
+    const product=req.body?.product||{};
+    if(!product.name)return res.status(400).json({error:'product.name gerekli'});
+    const priceTRY=Math.max(10, Math.round(Number(req.body?.priceTRY || product.priceTRY || product.lowestPrice || 0)));
+    const card=buildTrackerPlatformCard(product);
     const created=await platformCreateProduct(p,card,priceTRY);
     res.json({ok:true,priceTRY,...created});
   }catch(e){res.status(500).json({error:e.message});}
