@@ -19,10 +19,12 @@ const EBAY_CERT_ID         = process.env.EBAY_CERT_ID         || '';
 const SUPABASE_URL         = process.env.SUPABASE_URL         || '';
 const SUPABASE_SECRET_KEY  = process.env.SUPABASE_SECRET_KEY  || '';
 const SUPABASE_PUBLISHABLE = process.env.SUPABASE_PUBLISHABLE_KEY || '';
+const SERPAPI_KEY          = process.env.SERPAPI_KEY           || '';
 
 const hasPriceCharting = !!PRICECHARTING_TOKEN;
 const hasEbayBrowse    = !!EBAY_APP_ID && !!EBAY_CERT_ID;
 const hasSupabase      = !!SUPABASE_URL && !!SUPABASE_SECRET_KEY;
+const hasSerpAPI       = !!SERPAPI_KEY;
 
 // ═══════════════════════════════════════════
 // SUPABASE HELPER
@@ -36,7 +38,7 @@ async function sbQuery(table, method = 'GET', body = null, filter = '') {
       'Content-Type':  'application/json',
       'apikey':        SUPABASE_SECRET_KEY,
       'Authorization': 'Bearer ' + SUPABASE_SECRET_KEY,
-      'Prefer':        method === 'POST' ? 'return=representation' : ''
+      'Prefer':        method === 'POST' ? 'return=representation' : method === 'PATCH' ? 'return=representation' : ''
     }
   };
   if (body) opts.body = JSON.stringify(body);
@@ -46,7 +48,6 @@ async function sbQuery(table, method = 'GET', body = null, filter = '') {
   return txt ? JSON.parse(txt) : [];
 }
 
-// JWT doğrulama middleware
 async function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) return res.status(401).json({ error: 'Giriş yapmanız gerekiyor' });
@@ -65,7 +66,6 @@ async function requireAuth(req, res, next) {
   }
 }
 
-// Platform getirme (kullanıcıya göre)
 async function getPlatformForUser(platformId, userId) {
   if (hasSupabase) {
     const rows = await sbQuery('platforms', 'GET', null, `?id=eq.${platformId}&user_id=eq.${userId}`);
@@ -83,19 +83,26 @@ async function getPlatformForUser(platformId, userId) {
 const DB_FILE = 'pricebot-data.json';
 function loadDB() {
   try { if (fs.existsSync(DB_FILE)) return JSON.parse(fs.readFileSync(DB_FILE, 'utf8')); } catch(e) {}
-  return { platforms: [], logs: [] };
+  return { platforms: [], logs: [], trackedProducts: [] };
 }
 function saveDB(data) {
   try { fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2)); } catch(e) {}
 }
 let DB = loadDB();
+if (!DB.trackedProducts) DB.trackedProducts = [];
+
 const db = {
   getPlatforms:   ()   => DB.platforms,
   getPlatform:    (id) => DB.platforms.find(p => p.id === id),
   savePlatform:   (p)  => { const i = DB.platforms.findIndex(x => x.id === p.id); if(i>=0) DB.platforms[i]=p; else DB.platforms.push(p); saveDB(DB); },
   deletePlatform: (id) => { DB.platforms = DB.platforms.filter(p => p.id !== id); saveDB(DB); },
   getLogs:        (pid, lim=100) => { let l = pid ? DB.logs.filter(x=>x.platform_id===pid) : DB.logs; return l.slice(-lim).reverse(); },
-  addLog:         (pid, type, msg, lvl) => { DB.logs.push({id:Date.now(),platform_id:pid,type,message:msg,level:lvl,created_at:new Date().toISOString()}); if(DB.logs.length>1000) DB.logs=DB.logs.slice(-500); saveDB(DB); }
+  addLog:         (pid, type, msg, lvl) => { DB.logs.push({id:Date.now(),platform_id:pid,type,message:msg,level:lvl,created_at:new Date().toISOString()}); if(DB.logs.length>1000) DB.logs=DB.logs.slice(-500); saveDB(DB); },
+  // Price Tracker DB
+  getTrackedProducts: (userId) => DB.trackedProducts.filter(p => p.user_id === userId),
+  getTrackedProduct:  (id, userId) => DB.trackedProducts.find(p => p.id === id && p.user_id === userId),
+  saveTrackedProduct: (p) => { const i = DB.trackedProducts.findIndex(x => x.id === p.id); if(i>=0) DB.trackedProducts[i]=p; else DB.trackedProducts.push(p); saveDB(DB); },
+  deleteTrackedProduct: (id) => { DB.trackedProducts = DB.trackedProducts.filter(p => p.id !== id); saveDB(DB); }
 };
 console.log(`✅ DB hazır — Supabase: ${hasSupabase ? 'aktif' : 'JSON fallback'}`);
 
@@ -142,7 +149,136 @@ async function refreshRates() {
 }
 
 // ═══════════════════════════════════════════
-// GLOBAL KART FİYATI
+// SERPAPI — GOOGLE SHOPPING TR
+// ═══════════════════════════════════════════
+const serpCache = new Map();
+
+async function serpAPISearch(query, location = 'Turkey') {
+  if (!hasSerpAPI) return { results: [], error: 'SerpAPI key yok' };
+  
+  const cKey = query.toLowerCase().trim();
+  const cached = serpCache.get(cKey);
+  if (cached && Date.now() - cached.ts < 30 * 60 * 1000) return cached.data;
+
+  try {
+    const params = new URLSearchParams({
+      engine: 'google_shopping',
+      q: query,
+      gl: 'tr',
+      hl: 'tr',
+      location: location,
+      api_key: SERPAPI_KEY
+    });
+    const r = await fetch(`https://serpapi.com/search.json?${params}`, { signal: AbortSignal.timeout(15000) });
+    if (!r.ok) throw new Error(`SerpAPI ${r.status}`);
+    const d = await r.json();
+
+    const results = (d.shopping_results || []).map(item => {
+      const priceStr = (item.extracted_price || item.price || '').toString().replace(/[^\d.,]/g, '').replace(',', '.');
+      const priceTRY = parseFloat(priceStr) || 0;
+      
+      // Platform tespiti
+      let platform = 'other';
+      const src = (item.source || '').toLowerCase();
+      if (src.includes('trendyol')) platform = 'trendyol';
+      else if (src.includes('hepsiburada')) platform = 'hepsiburada';
+      else if (src.includes('amazon')) platform = 'amazon';
+      else if (src.includes('n11')) platform = 'n11';
+      else if (src.includes('cimri')) platform = 'cimri';
+      else if (src.includes('akakce') || src.includes('akakçe')) platform = 'akakce';
+      else if (src.includes('incehesap')) platform = 'incehesap';
+      else if (src.includes('gittigidiyor')) platform = 'gittigidiyor';
+      else if (src.includes('çiçeksepeti') || src.includes('ciceksepeti')) platform = 'ciceksepeti';
+
+      return {
+        id: item.product_id || `serp-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,
+        name: item.title || query,
+        priceTRY,
+        priceFormatted: item.price || `${priceTRY}₺`,
+        platform,
+        source: item.source || 'Bilinmeyen',
+        link: item.link || item.product_link || null,
+        image: item.thumbnail || null,
+        rating: item.rating || null,
+        reviews: item.reviews || null,
+        delivery: item.delivery || null,
+        badge: item.tag || null
+      };
+    }).filter(r => r.priceTRY > 0);
+
+    const data = {
+      results,
+      totalResults: results.length,
+      lowestPrice: results.length ? Math.min(...results.map(r => r.priceTRY)) : null,
+      lowestSeller: results.length ? results.reduce((a, b) => a.priceTRY < b.priceTRY ? a : b) : null,
+      avgPrice: results.length ? Math.round(results.reduce((s, r) => s + r.priceTRY, 0) / results.length) : null,
+      platforms: [...new Set(results.map(r => r.platform))],
+      query,
+      searchedAt: new Date().toISOString()
+    };
+
+    serpCache.set(cKey, { data, ts: Date.now() });
+    return data;
+  } catch(e) {
+    return { results: [], error: e.message, query };
+  }
+}
+
+// ═══════════════════════════════════════════
+// PRICE TRACKER — Rakip Fiyat Algoritması
+// ═══════════════════════════════════════════
+function calculateBeatPrice(competitorPrices, rules) {
+  if (!competitorPrices.length) return null;
+  
+  const lowestCompetitor = Math.min(...competitorPrices.map(p => p.priceTRY).filter(p => p > 0));
+  if (!lowestCompetitor || lowestCompetitor <= 0) return null;
+
+  const beatAmount = rules.beatByAmount || 0.10; // TL
+  const beatPercent = rules.beatByPercent || 0;   // %
+  const minMarginPercent = rules.minMarginPercent || 5;
+  const costPrice = rules.costPrice || 0;
+  const maxDropPercent = rules.maxDropPercent || 30;
+  const currentPrice = rules.currentPrice || 0;
+
+  // En düşük rakibin altına in
+  let suggestedPrice;
+  if (beatPercent > 0) {
+    suggestedPrice = Math.round(lowestCompetitor * (1 - beatPercent / 100) * 100) / 100;
+  } else {
+    suggestedPrice = lowestCompetitor - beatAmount;
+  }
+
+  // Minimum marj koruması
+  if (costPrice > 0) {
+    const minPrice = costPrice * (1 + minMarginPercent / 100);
+    if (suggestedPrice < minPrice) {
+      suggestedPrice = minPrice;
+    }
+  }
+
+  // Maksimum düşüş koruması
+  if (currentPrice > 0 && maxDropPercent > 0) {
+    const floor = currentPrice * (1 - maxDropPercent / 100);
+    if (suggestedPrice < floor) {
+      suggestedPrice = floor;
+    }
+  }
+
+  // 10 kuruş yuvarla
+  suggestedPrice = Math.round(suggestedPrice * 10) / 10;
+
+  return {
+    suggestedPrice,
+    lowestCompetitor,
+    savings: lowestCompetitor - suggestedPrice,
+    isBelow: suggestedPrice < lowestCompetitor,
+    marginProtected: costPrice > 0 && suggestedPrice <= costPrice * (1 + minMarginPercent / 100),
+    dropProtected: currentPrice > 0 && suggestedPrice <= currentPrice * (1 - maxDropPercent / 100)
+  };
+}
+
+// ═══════════════════════════════════════════
+// GLOBAL KART FİYATI (mevcut)
 // ═══════════════════════════════════════════
 const priceCache = new Map();
 async function getGlobalPrice(productName) {
@@ -156,48 +292,17 @@ async function getGlobalPrice(productName) {
   if (['pokemon','default'].includes(category)) {
     try {
       const r = await fetch(`https://api.tcgdex.net/v2/en/cards?name=${encodeURIComponent(searchTerm)}&itemsPerPage=3`,{signal:AbortSignal.timeout(8000)});
-      if (r.ok) {
-        const list = await r.json();
-        if (Array.isArray(list) && list.length) {
-          const dr = await fetch(`https://api.tcgdex.net/v2/en/cards/${list[0].id}`,{signal:AbortSignal.timeout(8000)});
-          if (dr.ok) {
-            const card = await dr.json();
-            const cmEUR=card.pricing?.cardmarket?.avg30||card.pricing?.cardmarket?.trend||0;
-            const tcgUSD=card.pricing?.tcgplayer?.holo?.marketPrice||card.pricing?.tcgplayer?.normal?.marketPrice||0;
-            if(cmEUR>0)  sources.push({source:'Cardmarket (TCGdex)',priceEUR:cmEUR, priceTRY:Math.round(cmEUR*rates.EUR)});
-            if(tcgUSD>0) sources.push({source:'TCGPlayer (TCGdex)',priceUSD:tcgUSD,priceTRY:Math.round(tcgUSD*rates.USD)});
-          }
-        }
-      }
+      if (r.ok) { const list = await r.json(); if (Array.isArray(list) && list.length) { const dr = await fetch(`https://api.tcgdex.net/v2/en/cards/${list[0].id}`,{signal:AbortSignal.timeout(8000)}); if (dr.ok) { const card = await dr.json(); const cmEUR=card.pricing?.cardmarket?.avg30||card.pricing?.cardmarket?.trend||0; const tcgUSD=card.pricing?.tcgplayer?.holo?.marketPrice||card.pricing?.tcgplayer?.normal?.marketPrice||0; if(cmEUR>0)sources.push({source:'Cardmarket (TCGdex)',priceEUR:cmEUR,priceTRY:Math.round(cmEUR*rates.EUR)}); if(tcgUSD>0)sources.push({source:'TCGPlayer (TCGdex)',priceUSD:tcgUSD,priceTRY:Math.round(tcgUSD*rates.USD)}); } } }
     } catch(e) { errors.push('TCGdex:'+e.message); }
   }
   if (['yugioh','default'].includes(category)) {
-    try {
-      const r = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?fname=${encodeURIComponent(searchTerm)}&num=1`,{signal:AbortSignal.timeout(8000)});
-      if (r.ok) {
-        const d=await r.json(); const card=d.data?.[0];
-        if(card){ const tcp=parseFloat(card.card_prices?.[0]?.tcgplayer_price||0),cm=parseFloat(card.card_prices?.[0]?.cardmarket_price||0);
-          if(tcp>0)sources.push({source:'TCGPlayer (YGO)',priceUSD:tcp,priceTRY:Math.round(tcp*rates.USD)});
-          if(cm>0) sources.push({source:'Cardmarket (YGO)',priceEUR:cm, priceTRY:Math.round(cm*rates.EUR)}); }
-      }
-    } catch(e) { errors.push('YGO:'+e.message); }
+    try { const r = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?fname=${encodeURIComponent(searchTerm)}&num=1`,{signal:AbortSignal.timeout(8000)}); if (r.ok) { const d=await r.json(); const card=d.data?.[0]; if(card){ const tcp=parseFloat(card.card_prices?.[0]?.tcgplayer_price||0),cm=parseFloat(card.card_prices?.[0]?.cardmarket_price||0); if(tcp>0)sources.push({source:'TCGPlayer (YGO)',priceUSD:tcp,priceTRY:Math.round(tcp*rates.USD)}); if(cm>0)sources.push({source:'Cardmarket (YGO)',priceEUR:cm,priceTRY:Math.round(cm*rates.EUR)}); } } } catch(e) { errors.push('YGO:'+e.message); }
   }
   if (['magic','default'].includes(category)) {
-    try {
-      const r = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(searchTerm)}`,{signal:AbortSignal.timeout(8000)});
-      if (r.ok) {
-        const card=await r.json();
-        const usd=parseFloat(card.prices?.usd||card.prices?.usd_foil||0),eur=parseFloat(card.prices?.eur||card.prices?.eur_foil||0);
-        if(usd>0)sources.push({source:'TCGPlayer (Scryfall)',priceUSD:usd,priceTRY:Math.round(usd*rates.USD)});
-        if(eur>0)sources.push({source:'Cardmarket (Scryfall)',priceEUR:eur,priceTRY:Math.round(eur*rates.EUR)});
-      }
-    } catch(e) { errors.push('Scryfall:'+e.message); }
+    try { const r = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(searchTerm)}`,{signal:AbortSignal.timeout(8000)}); if (r.ok) { const card=await r.json(); const usd=parseFloat(card.prices?.usd||card.prices?.usd_foil||0),eur=parseFloat(card.prices?.eur||card.prices?.eur_foil||0); if(usd>0)sources.push({source:'TCGPlayer (Scryfall)',priceUSD:usd,priceTRY:Math.round(usd*rates.USD)}); if(eur>0)sources.push({source:'Cardmarket (Scryfall)',priceEUR:eur,priceTRY:Math.round(eur*rates.EUR)}); } } catch(e) { errors.push('Scryfall:'+e.message); }
   }
   if (category==='onepiece') {
-    try {
-      const r=await fetch(`https://optcgapi.com/api/cards/?search=${encodeURIComponent(searchTerm)}`,{signal:AbortSignal.timeout(8000)});
-      if(r.ok){const d=await r.json();const card=(d.results||d||[])[0];if(card){const usd=parseFloat(card.price||0);if(usd>0)sources.push({source:'OPTCG',priceUSD:usd,priceTRY:Math.round(usd*rates.USD)});}}
-    } catch(e) { errors.push('OPTCG:'+e.message); }
+    try { const r=await fetch(`https://optcgapi.com/api/cards/?search=${encodeURIComponent(searchTerm)}`,{signal:AbortSignal.timeout(8000)}); if(r.ok){const d=await r.json();const card=(d.results||d||[])[0];if(card){const usd=parseFloat(card.price||0);if(usd>0)sources.push({source:'OPTCG',priceUSD:usd,priceTRY:Math.round(usd*rates.USD)});}} } catch(e) { errors.push('OPTCG:'+e.message); }
   }
   const tryPrices=sources.map(s=>s.priceTRY).filter(p=>p>0);
   const avgTRY=tryPrices.length?Math.round(tryPrices.reduce((a,b)=>a+b,0)/tryPrices.length):null;
@@ -217,8 +322,6 @@ function calcSuggestedPrice(currentPrice, globalAvgTRY, category) {
 // ═══════════════════════════════════════════
 // PLATFORM ADAPTÖRLER
 // ═══════════════════════════════════════════
-
-// ── İKAS ────────────────────────────────────
 const ikasTokenCache = {};
 async function ikasToken(cfg) {
   const key=cfg.storeName+'_'+cfg.clientId;const c=ikasTokenCache[key];
@@ -265,7 +368,6 @@ async function ikasCreateProduct(cfg,card,priceTRY) {
   return{id:productId,variantId};
 }
 
-// ── SHOPİFY ─────────────────────────────────
 function shopifyHeaders(cfg){return{'Content-Type':'application/json','X-Shopify-Access-Token':cfg.accessToken};}
 function shopifyBase(cfg){return`https://${cfg.storeDomain}/admin/api/2024-01`;}
 async function shopifyGetProducts(cfg) {
@@ -283,9 +385,6 @@ async function shopifyCreateProduct(cfg,card,priceTRY) {
   if(!r.ok){const e=await r.json();throw new Error(JSON.stringify(e.errors||e));}
   const d=await r.json();return{id:String(d.product.id),variantId:String(d.product.variants?.[0]?.id)};
 }
-
-async function trendyolGetProducts(){return[];}
-async function hbGetProducts(){return[];}
 
 async function platformGetProducts(platform) {
   const cfg=typeof platform.config==='string'?JSON.parse(platform.config):platform.config;
@@ -321,6 +420,65 @@ async function runPlatformUpdate(platformId) {
     addLog(platformId,'SCHED',`${updated}/${products.length} güncellendi`,'info');
   }catch(e){addLog(platformId,'SCHED','Hata:'+e.message,'error');}
 }
+
+// Price Tracker zamanlayıcı
+const trackerSchedulers = {};
+async function runTrackerUpdate(productId, userId) {
+  const tracked = db.getTrackedProduct(productId, userId);
+  if (!tracked) return;
+  
+  addLog('tracker', 'TRACKER', `Fiyat tarama: ${tracked.name}`, 'info');
+  try {
+    const serpData = await serpAPISearch(tracked.searchQuery || tracked.name);
+    const competitors = serpData.results || [];
+    
+    // Fiyat geçmişine ekle
+    if (!tracked.priceHistory) tracked.priceHistory = [];
+    tracked.priceHistory.push({
+      ts: new Date().toISOString(),
+      competitors: competitors.slice(0, 10).map(c => ({ source: c.source, platform: c.platform, price: c.priceTRY })),
+      lowestPrice: serpData.lowestPrice,
+      avgPrice: serpData.avgPrice
+    });
+    // Son 100 kayıt tut
+    if (tracked.priceHistory.length > 100) tracked.priceHistory = tracked.priceHistory.slice(-100);
+    
+    // Önerilen fiyat hesapla
+    if (competitors.length && tracked.rules) {
+      const calc = calculateBeatPrice(competitors, { ...tracked.rules, currentPrice: tracked.ourPrice || 0 });
+      if (calc) {
+        tracked.suggestedPrice = calc.suggestedPrice;
+        tracked.lowestCompetitor = calc.lowestCompetitor;
+        tracked.lastScanAt = new Date().toISOString();
+        tracked.competitorCount = competitors.length;
+      }
+    }
+    
+    tracked.lastCompetitors = competitors.slice(0, 20);
+    db.saveTrackedProduct(tracked);
+    addLog('tracker', 'TRACKER', `${tracked.name}: En düşük ${serpData.lowestPrice}₺, ${competitors.length} rakip`, 'success');
+  } catch(e) {
+    addLog('tracker', 'TRACKER', `Hata: ${e.message}`, 'error');
+  }
+}
+
+function startTrackerScheduler(productId, userId, intervalMinutes = 60) {
+  const key = `tracker_${productId}`;
+  if (trackerSchedulers[key]?.timer) clearInterval(trackerSchedulers[key].timer);
+  trackerSchedulers[key] = {
+    timer: setInterval(() => runTrackerUpdate(productId, userId), intervalMinutes * 60 * 1000),
+    intervalMinutes,
+    startedAt: new Date().toISOString()
+  };
+  // İlk çalıştırma
+  setTimeout(() => runTrackerUpdate(productId, userId), 2000);
+}
+
+function stopTrackerScheduler(productId) {
+  const key = `tracker_${productId}`;
+  if (trackerSchedulers[key]?.timer) { clearInterval(trackerSchedulers[key].timer); delete trackerSchedulers[key]; }
+}
+
 function startPlatformScheduler(id,h){
   if(schedulers[id]?.timer)clearInterval(schedulers[id].timer);
   schedulers[id]={timer:setInterval(()=>runPlatformUpdate(id),h*60*60*1000),intervalHours:h,startedAt:new Date().toISOString()};
@@ -414,10 +572,248 @@ app.get('/api/image-proxy', async(req,res)=>{
   }catch(e){res.status(500).send('Error');}
 });
 
-// Auth endpoint
 app.get('/api/auth/me', requireAuth, (req,res)=>res.json({id:req.userId,email:req.userEmail}));
 
-// ── PLATFORMLAR (Supabase + requireAuth) ──
+// ═══════════════════════════════════════════
+// PRICE TRACKER API
+// ═══════════════════════════════════════════
+
+// SerpAPI arama
+app.post('/api/tracker/search', requireAuth, async(req, res) => {
+  const { query, location } = req.body;
+  if (!query) return res.status(400).json({ error: 'query gerekli' });
+  try {
+    await refreshRates();
+    const data = await serpAPISearch(query, location || 'Turkey');
+    res.json(data);
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Ürün takibe al
+app.post('/api/tracker/products', requireAuth, async(req, res) => {
+  const { name, searchQuery, ourPrice, costPrice, platformId, rules } = req.body;
+  if (!name) return res.status(400).json({ error: 'name gerekli' });
+  
+  const product = {
+    id: `tp_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
+    user_id: req.userId,
+    name,
+    searchQuery: searchQuery || name,
+    ourPrice: ourPrice || 0,
+    costPrice: costPrice || 0,
+    platformId: platformId || null,
+    rules: rules || { beatByAmount: 0.10, minMarginPercent: 5, maxDropPercent: 30 },
+    suggestedPrice: null,
+    lowestCompetitor: null,
+    lastCompetitors: [],
+    priceHistory: [],
+    lastScanAt: null,
+    competitorCount: 0,
+    autoSync: false,
+    schedulerMinutes: 60,
+    created_at: new Date().toISOString()
+  };
+  
+  try {
+    if (hasSupabase) {
+      await sbQuery('tracked_products', 'POST', product);
+    } else {
+      db.saveTrackedProduct(product);
+    }
+    
+    // İlk tarama yap
+    const serpData = await serpAPISearch(product.searchQuery);
+    product.lastCompetitors = (serpData.results || []).slice(0, 20);
+    product.competitorCount = serpData.results?.length || 0;
+    
+    if (serpData.results?.length && product.rules) {
+      const calc = calculateBeatPrice(serpData.results, { ...product.rules, currentPrice: product.ourPrice });
+      if (calc) {
+        product.suggestedPrice = calc.suggestedPrice;
+        product.lowestCompetitor = calc.lowestCompetitor;
+        product.lastScanAt = new Date().toISOString();
+      }
+    }
+    
+    product.priceHistory.push({
+      ts: new Date().toISOString(),
+      lowestPrice: serpData.lowestPrice,
+      avgPrice: serpData.avgPrice,
+      competitors: (serpData.results || []).slice(0, 10).map(c => ({ source: c.source, platform: c.platform, price: c.priceTRY }))
+    });
+    
+    db.saveTrackedProduct(product);
+    addLog('tracker', 'TRACKER', `${name} takibe alındı — ${serpData.results?.length || 0} rakip`, 'success');
+    res.json({ ok: true, product });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Takip edilen ürünleri listele
+app.get('/api/tracker/products', requireAuth, async(req, res) => {
+  try {
+    let products;
+    if (hasSupabase) {
+      products = await sbQuery('tracked_products', 'GET', null, `?user_id=eq.${req.userId}&order=created_at.desc`);
+    } else {
+      products = db.getTrackedProducts(req.userId);
+    }
+    // Zamanlayıcı durumunu ekle
+    products = products.map(p => ({
+      ...p,
+      hasScheduler: !!trackerSchedulers[`tracker_${p.id}`],
+      schedulerMinutes: trackerSchedulers[`tracker_${p.id}`]?.intervalMinutes || null
+    }));
+    res.json(products);
+  } catch(e) {
+    res.json([]);
+  }
+});
+
+// Tek ürün detay
+app.get('/api/tracker/products/:id', requireAuth, async(req, res) => {
+  try {
+    const p = db.getTrackedProduct(req.params.id, req.userId);
+    if (!p) return res.status(404).json({ error: 'Bulunamadı' });
+    res.json(p);
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Ürünü güncelle
+app.patch('/api/tracker/products/:id', requireAuth, async(req, res) => {
+  try {
+    const p = db.getTrackedProduct(req.params.id, req.userId);
+    if (!p) return res.status(404).json({ error: 'Bulunamadı' });
+    const updates = req.body;
+    Object.assign(p, updates);
+    db.saveTrackedProduct(p);
+    res.json({ ok: true, product: p });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Ürünü sil
+app.delete('/api/tracker/products/:id', requireAuth, async(req, res) => {
+  try {
+    stopTrackerScheduler(req.params.id);
+    db.deleteTrackedProduct(req.params.id);
+    res.json({ ok: true });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Manuel tarama tetikle
+app.post('/api/tracker/products/:id/scan', requireAuth, async(req, res) => {
+  try {
+    const p = db.getTrackedProduct(req.params.id, req.userId);
+    if (!p) return res.status(404).json({ error: 'Bulunamadı' });
+    
+    const serpData = await serpAPISearch(p.searchQuery || p.name);
+    p.lastCompetitors = (serpData.results || []).slice(0, 20);
+    p.competitorCount = serpData.results?.length || 0;
+    p.lastScanAt = new Date().toISOString();
+    
+    if (serpData.results?.length && p.rules) {
+      const calc = calculateBeatPrice(serpData.results, { ...p.rules, currentPrice: p.ourPrice });
+      if (calc) {
+        p.suggestedPrice = calc.suggestedPrice;
+        p.lowestCompetitor = calc.lowestCompetitor;
+      }
+    }
+    
+    if (!p.priceHistory) p.priceHistory = [];
+    p.priceHistory.push({
+      ts: new Date().toISOString(),
+      lowestPrice: serpData.lowestPrice,
+      avgPrice: serpData.avgPrice,
+      competitors: (serpData.results || []).slice(0, 10).map(c => ({ source: c.source, platform: c.platform, price: c.priceTRY }))
+    });
+    if (p.priceHistory.length > 100) p.priceHistory = p.priceHistory.slice(-100);
+    
+    db.saveTrackedProduct(p);
+    res.json({ ok: true, product: p, serpData });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Fiyatı platforma push et
+app.post('/api/tracker/products/:id/push', requireAuth, async(req, res) => {
+  try {
+    const p = db.getTrackedProduct(req.params.id, req.userId);
+    if (!p) return res.status(404).json({ error: 'Bulunamadı' });
+    if (!p.platformId) return res.status(400).json({ error: 'Platform bağlı değil' });
+    
+    const price = req.body.price || p.suggestedPrice;
+    if (!price) return res.status(400).json({ error: 'Fiyat hesaplanmamış' });
+    
+    const platform = await getPlatformForUser(p.platformId, req.userId);
+    // Platform ürün ID'si varsa güncelle
+    if (p.platformProductId && p.platformVariantId) {
+      await platformUpdatePrice(platform, { id: p.platformProductId, variantId: p.platformVariantId }, price);
+    }
+    
+    p.ourPrice = price;
+    p.lastPushAt = new Date().toISOString();
+    db.saveTrackedProduct(p);
+    
+    addLog(p.platformId, 'TRACKER-PUSH', `${p.name} → ${price}₺`, 'success');
+    res.json({ ok: true, price });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Zamanlayıcı başlat
+app.post('/api/tracker/products/:id/scheduler/start', requireAuth, async(req, res) => {
+  try {
+    const p = db.getTrackedProduct(req.params.id, req.userId);
+    if (!p) return res.status(404).json({ error: 'Bulunamadı' });
+    const minutes = req.body.intervalMinutes || 60;
+    startTrackerScheduler(p.id, req.userId, minutes);
+    p.schedulerMinutes = minutes;
+    db.saveTrackedProduct(p);
+    res.json({ ok: true, intervalMinutes: minutes });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Zamanlayıcı durdur
+app.post('/api/tracker/products/:id/scheduler/stop', requireAuth, async(req, res) => {
+  try {
+    stopTrackerScheduler(req.params.id);
+    res.json({ ok: true });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Toplu beat hesaplama
+app.post('/api/tracker/calculate-beat', requireAuth, async(req, res) => {
+  const { competitorPrices, rules } = req.body;
+  if (!competitorPrices?.length) return res.status(400).json({ error: 'competitorPrices gerekli' });
+  const result = calculateBeatPrice(competitorPrices, rules || {});
+  res.json(result);
+});
+
+// SerpAPI durum
+app.get('/api/tracker/status', (req, res) => {
+  res.json({
+    serpAPI: hasSerpAPI,
+    activeTrackers: Object.keys(trackerSchedulers).length,
+    cacheSize: serpCache.size
+  });
+});
+
+// ── PLATFORMLAR ──
 app.get('/api/platforms', requireAuth, async(req,res)=>{
   try{
     let rows;
@@ -610,14 +1006,15 @@ app.get('/api/ebay/test', async(req,res)=>{
 
 app.get('/api/health', async(req,res)=>{
   const rates=await refreshRates();
-  res.json({ok:true,version:'2.0.0',rates,schedulers:Object.keys(schedulers),features:{priceCharting:hasPriceCharting,ebayBrowse:hasEbayBrowse,supabase:hasSupabase}});
+  res.json({ok:true,version:'3.0.0',rates,schedulers:Object.keys(schedulers),trackerSchedulers:Object.keys(trackerSchedulers),features:{priceCharting:hasPriceCharting,ebayBrowse:hasEbayBrowse,supabase:hasSupabase,serpAPI:hasSerpAPI}});
 });
 
 // ─────────────────────────────────────────────
 app.listen(PORT, async()=>{
-  console.log(`\n🚀 PriceBot Pro v2.0 → http://localhost:${PORT}`);
-  console.log(`   Supabase: ${hasSupabase?'✅ aktif':'⚠️  JSON fallback'}`);
-  console.log(`   eBay:     ${hasEbayBrowse?'✅ Browse API':'⚠️  RSS fallback'}`);
-  console.log(`   PriceCharting: ${hasPriceCharting?'✅ aktif':'⚠️  kapalı'}\n`);
+  console.log(`\n🚀 PriceBot Pro v3.0 → http://localhost:${PORT}`);
+  console.log(`   Supabase:       ${hasSupabase?'✅ aktif':'⚠️  JSON fallback'}`);
+  console.log(`   eBay:           ${hasEbayBrowse?'✅ Browse API':'⚠️  RSS fallback'}`);
+  console.log(`   PriceCharting:  ${hasPriceCharting?'✅ aktif':'⚠️  kapalı'}`);
+  console.log(`   SerpAPI:        ${hasSerpAPI?'✅ aktif':'⚠️  kapalı'}\n`);
   await refreshRates();
 });
