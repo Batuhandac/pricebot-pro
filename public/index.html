@@ -10,14 +10,83 @@
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;400;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
 <script>
-tailwind.config={darkMode:"class",theme:{extend:{colors:{"secondary-fixed-dim":"#4edea3","surface-container-highest":"#2d3449","secondary":"#4edea3","surface-variant":"#2d3449","surface-dim":"#0b1326","on-primary-container":"#613b00","tertiary":"#8ed5ff","tertiary-container":"#38bdf8","surface-container-high":"#222a3d","surface-container":"#171f33","outline":"#a08e7a","background":"#0b1326","surface-bright":"#31394d","secondary-container":"#00a572","on-primary":"#472a00","outline-variant":"#534434","surface":"#0b1326","on-secondary-container":"#00311f","on-surface-variant":"#d8c3ad","surface-container-low":"#131b2e","inverse-surface":"#dae2fd","on-secondary-fixed":"#002113","on-background":"#dae2fd","surface-container-lowest":"#060e20","on-surface":"#dae2fd","primary":"#ffc174","on-secondary":"#003824","primary-container":"#f59e0b","error":"#ffb4ab","error-container":"#93000a","on-error-container":"#ffdad6"},borderRadius:{DEFAULT:"0px",lg:"0px",xl:"0px",full:"9999px"},fontFamily:{headline:["Manrope"],body:["Inter"],label:["Inter"]}}}}
+tailwind.config = {
+  darkMode: "class",
+  theme: {
+    extend: {
+      colors: {
+        "inverse-on-surface": "#283044",
+        "tertiary-container": "#ffbcb4",
+        "secondary-container": "#00b47d",
+        "surface": "#0b1326",
+        "surface-container-highest": "#2d3449",
+        "surface-bright": "#31394e",
+        "outline": "#9d8e7f",
+        "on-tertiary-fixed-variant": "#6c3832",
+        "primary-fixed-dim": "#f8bb6f",
+        "on-tertiary-fixed": "#360e0a",
+        "surface-container-high": "#222a3e",
+        "surface-container-low": "#131b2e",
+        "on-secondary-container": "#003e28",
+        "background": "#0b1326",
+        "on-primary-fixed-variant": "#653e00",
+        "surface-variant": "#2d3449",
+        "secondary": "#4edea3",
+        "on-surface-variant": "#d5c4b3",
+        "secondary-fixed": "#6ffbbe",
+        "primary-fixed": "#ffddb7",
+        "on-error-container": "#ffdad6",
+        "on-primary-fixed": "#2a1700",
+        "on-secondary-fixed-variant": "#005236",
+        "tertiary": "#ffe2de",
+        "error-container": "#93000a",
+        "primary": "#ffe4c9",
+        "tertiary-fixed-dim": "#ffb4ab",
+        "surface-tint": "#f8bb6f",
+        "surface-container-lowest": "#060d20",
+        "primary-container": "#ffc174",
+        "secondary-fixed-dim": "#4edea3",
+        "inverse-surface": "#dbe2fd",
+        "on-error": "#690005",
+        "on-surface": "#dbe2fd",
+        "error": "#ffb4ab",
+        "on-primary": "#472a00",
+        "surface-dim": "#0b1326",
+        "inverse-primary": "#825510",
+        "on-secondary": "#003824",
+        "on-tertiary": "#51221d",
+        "tertiary-fixed": "#ffdad5",
+        "on-background": "#dbe2fd",
+        "outline-variant": "#504538",
+        "on-tertiary-container": "#7f4740",
+        "on-secondary-fixed": "#002114",
+        "on-primary-container": "#794d07",
+        "surface-container": "#171f33"
+      },
+      borderRadius: {
+        "DEFAULT": "0px",
+        "lg": "0px",
+        "xl": "0px",
+        "full": "9999px"
+      },
+      fontFamily: {
+        "headline": ["Manrope"],
+        "body": ["Inter"],
+        "label": ["Inter"]
+      }
+    },
+  },
+}
 </script>
 <style>
 .material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle;}
 body{background:#0b1326;color:#dae2fd;font-family:'Inter',sans-serif;margin:0;overflow-x:hidden;}
-::-webkit-scrollbar{width:4px;height:4px;}::-webkit-scrollbar-track{background:#060e20;}::-webkit-scrollbar-thumb{background:#222a3d;}::-webkit-scrollbar-thumb:hover{background:#f59e0b;}
 .page{display:none;}.page.on{display:block;}
 .no-scrollbar::-webkit-scrollbar{display:none;}.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none;}
+.sharp-edge { border-radius: 0px !important; }
+.ghost-border { outline: 1px solid rgba(80, 69, 56, 0.15); }
+.ticker-scroll { animation: ticker 30s linear infinite; }
+@keyframes ticker { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
 @keyframes glow-amber{0%,100%{box-shadow:0 0 30px rgba(255,193,116,.15),inset 0 0 30px rgba(255,193,116,.05)}50%{box-shadow:0 0 60px rgba(255,193,116,.25),inset 0 0 60px rgba(255,193,116,.1)}}
 @keyframes glow-teal{0%,100%{box-shadow:0 0 30px rgba(78,222,163,.15),inset 0 0 30px rgba(78,222,163,.05)}50%{box-shadow:0 0 60px rgba(78,222,163,.25),inset 0 0 60px rgba(78,222,163,.1)}}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
@@ -32,12 +101,18 @@ body{background:#0b1326;color:#dae2fd;font-family:'Inter',sans-serif;margin:0;ov
 .plat-cimri{background:#2196f320;color:#64b5f6;border:1px solid #64b5f640;}
 .plat-akakce{background:#e91e6320;color:#f06292;border:1px solid #f0629240;}
 .plat-other{background:#9e9e9e20;color:#bdbdbd;border:1px solid #bdbdbd40;}
-.plat-incehesap{background:#4caf5020;color:#81c784;border:1px solid #81c78440;}
-.plat-ciceksepeti{background:#e91e6320;color:#f48fb1;border:1px solid #f48fb140;}
-.plat-gittigidiyor{background:#009ddc20;color:#4fc3f7;border:1px solid #4fc3f740;}
 </style>
 </head>
 <body>
+
+<!-- Ticker Tape Component -->
+<div class="fixed top-0 left-0 w-full h-[24px] bg-surface-container-highest z-[60] flex items-center overflow-hidden border-b border-outline-variant/15">
+  <div id="tickerContent" class="ticker-scroll whitespace-nowrap flex gap-8">
+    <span class="text-[10px] font-bold text-secondary uppercase tracking-widest flex items-center gap-2">
+      <span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> OA MARKET INTELLIGENCE V4.0 AKTİF
+    </span>
+  </div>
+</div>
 
 <!-- ══ AUTH OVERLAY ══════════════════════════ -->
 <div id="authOverlay" class="fixed inset-0 bg-[#060e20] z-[999] flex items-center justify-center">
@@ -136,141 +211,231 @@ body{background:#0b1326;color:#dae2fd;font-family:'Inter',sans-serif;margin:0;ov
 </div>
 
 <!-- ══ SIDEBAR ════════════════════════════════ -->
-<aside id="sidebar" class="fixed left-0 top-0 h-full w-20 flex flex-col bg-[#0b1326] z-50 border-r border-outline-variant/10 transition-transform duration-300" style="display:none">
-  <div class="h-14 flex items-center justify-center bg-[#060e20] border-b border-outline-variant/10 cursor-pointer" onclick="showEntry()">
-    <span class="text-primary font-black italic text-xl tracking-tighter font-headline">OA</span>
+<aside id="sidebar" class="fixed left-0 top-6 h-[calc(100%-24px)] w-20 flex flex-col items-center bg-[#131b2e] z-50 border-r border-[#504538]/15 font-['Inter'] font-medium antialiased transition-transform duration-300" style="display:none">
+  <div class="mb-10 mt-6 cursor-pointer" onclick="showEntry()">
+    <span class="material-symbols-outlined text-[#ffc174] text-3xl font-black">smart_toy</span>
   </div>
-  <nav class="flex-1 flex flex-col items-center py-4 gap-1" id="sidebarNav"></nav>
-  <div class="pb-4 flex flex-col items-center gap-2">
-    <div class="flex items-center gap-1.5 px-2"><span class="w-1.5 h-1.5 rounded-full bg-secondary" id="sDot"></span><span class="text-[9px] font-bold text-secondary uppercase tracking-wider" id="sTxt">—</span></div>
+  <nav class="flex flex-col w-full gap-2" id="sidebarNav"></nav>
+  <div class="mt-auto flex flex-col w-full gap-2 pb-4">
+    <div class="flex flex-col items-center gap-1.5 mb-2"><span class="w-1.5 h-1.5 rounded-full bg-secondary" id="sDot"></span><span class="text-[9px] font-bold text-secondary uppercase tracking-wider" id="sTxt">—</span></div>
+    <div class="group flex items-center justify-center h-16 w-full hover:bg-[#222a3e] transition-all text-[#d5c4b3] cursor-pointer"><span class="material-symbols-outlined">help</span></div>
+    <div onclick="doLogout()" class="group flex items-center justify-center h-16 w-full hover:bg-[#222a3e] transition-all text-[#d5c4b3] cursor-pointer"><span class="material-symbols-outlined">logout</span></div>
   </div>
 </aside>
 
 <!-- ══ TOP BAR ════════════════════════════════ -->
-<header id="topBar" class="fixed top-0 right-0 left-20 z-40 h-14 bg-[#0b1326]/90 backdrop-blur-xl flex items-center justify-between px-6 border-b border-outline-variant/10" style="display:none">
-  <div class="flex items-center gap-6">
-    <h1 class="text-primary font-bold tracking-tighter text-lg font-headline" id="topTitle">Obsidian Architect</h1>
-    <div class="hidden md:flex gap-6 items-center">
-      <span class="text-primary-container font-bold text-xs uppercase tracking-widest">USD: <span id="tUSD">—</span>₺</span>
-      <span class="text-on-surface-variant text-xs font-semibold uppercase tracking-widest">EUR: <span id="tEUR">—</span>₺</span>
-    </div>
+<header id="topBar" class="fixed top-6 right-0 left-20 h-14 bg-[#0b1326] border-b border-[#504538]/15 flex items-center justify-between px-6 z-40" style="display:none">
+  <div class="flex items-center gap-4">
+    <span class="text-xl font-black text-[#ffc174] uppercase font-['Manrope'] tracking-tight cursor-pointer" onclick="showEntry()">PriceBot Pro</span>
+    <div class="h-4 w-px bg-outline-variant/30 ml-2"></div>
+    <span class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold" id="topTitle">Module</span>
   </div>
   <div class="flex items-center gap-4">
-    <button onclick="showEntry()" class="text-[10px] font-bold uppercase tracking-widest text-outline hover:text-primary border border-outline-variant/20 px-3 py-1.5">← Modüller</button>
-    <div id="userInfo" class="hidden items-center gap-3">
-      <span class="text-[10px] text-on-surface-variant font-bold hidden lg:block" id="userEmailTxt">—</span>
-      <button onclick="doLogout()" class="text-[10px] font-bold uppercase tracking-widest text-outline hover:text-error border border-outline-variant/20 px-3 py-1.5">Çıkış</button>
+    <button class="p-2 hover:bg-[#31394e]/60 text-[#d5c4b3] transition-colors"><span class="material-symbols-outlined">notifications</span></button>
+    <button class="p-2 hover:bg-[#31394e]/60 text-[#d5c4b3] transition-colors"><span class="material-symbols-outlined">settings</span></button>
+    <div class="w-8 h-8 bg-surface-container-high border border-outline-variant/20 flex items-center justify-center overflow-hidden">
+      <img alt="User profile avatar" class="w-full h-full object-cover" id="uAvatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuByuUGAXuESUu48qH6Sh8HX3-lXi4v2xkY0SQt3ANymhrSYZcLqa2lbRowFk4uWZh4Avf5apgTTuQ0zTMtNzqhexvQn-fo97OobRQz60knLXYTYE3Fgug5WXtKI6LTApwWbFboAyBeQOmasEBfT81Zhs5xtyLsCqQ6aoTR_ex52hCdlDNI5fzm_aHvIwOSpUGP72x3IbWa475hPlKIUoCae81xdnoA3d6OXYdkjXvYT7OS5SeWk3u5zQqgIOayJwCWhjwU-97CG_9k"/>
     </div>
   </div>
 </header>
 
 <!-- ══ MAIN ══════════════════════════════════ -->
-<main class="ml-20 mt-14 mb-8 min-h-screen" id="mainContent" style="display:none">
+<main class="ml-20 mt-20 mb-8 min-h-screen relative" id="mainContent" style="display:none">
 
 <!-- ╔══════════════════════════════════════════╗ -->
 <!-- ║        PRICE TRACKER MODULE              ║ -->
 <!-- ╚══════════════════════════════════════════╝ -->
 
-<!-- TRACKER DASHBOARD -->
-<div class="page" id="page-tracker-dash">
-  <div class="p-8 max-w-7xl mx-auto">
-    <header class="mb-8 border-b border-outline-variant/20 pb-6 flex items-end justify-between flex-wrap gap-4">
-      <div>
-        <div class="text-[10px] font-bold uppercase tracking-[.2em] text-secondary mb-1">Price Tracker</div>
-        <h2 class="font-headline text-4xl font-extrabold tracking-tight text-on-surface mb-1">Rakip Fiyat Takibi</h2>
-        <p class="text-on-surface-variant text-xs uppercase tracking-[.2em] font-bold">Cimri · Akakçe · Trendyol · HB · Amazon — Anlık Fiyat İstihbaratı</p>
-      </div>
-      <div class="flex gap-2">
-        <button onclick="openM('mTrackerAdd')" class="bg-secondary text-on-secondary-fixed px-5 py-2 text-xs font-bold uppercase tracking-widest">+ Ürün Takip Et</button>
-        <button onclick="openM('mTrackerSearch')" class="bg-surface-container-high text-on-surface px-4 py-2 text-xs font-bold uppercase tracking-wider">🔍 Piyasa Ara</button>
-      </div>
-    </header>
-    <!-- Stats -->
-    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-      <div class="bg-surface-container-high p-5 border-l-2 border-secondary"><p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">Takip Edilen</p><p class="text-3xl font-headline font-extrabold text-on-surface" id="trTotal">0</p></div>
-      <div class="bg-surface-container-high p-5 border-l-2 border-primary"><p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">En Düşük Bulundu</p><p class="text-3xl font-headline font-extrabold text-primary" id="trBelow">0</p></div>
-      <div class="bg-surface-container-high p-5 border-l-2 border-error"><p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">Fiyat Düştü</p><p class="text-3xl font-headline font-extrabold text-error" id="trDrop">0</p></div>
-      <div class="bg-surface-container-high p-5 border-l-2 border-tertiary"><p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">Aktif Zamanlayıcı</p><p class="text-3xl font-headline font-extrabold text-tertiary" id="trSched">0</p></div>
-      <div class="bg-surface-container-high p-5 border-l-2 border-on-surface-variant"><p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">SerpAPI</p><p class="text-3xl font-headline font-extrabold" id="trSerp">—</p></div>
+<!-- TRACKER DASHBOARD & SEARCH (Combined View) -->
+<div class="page" id="page-market-search">
+  <!-- Search Section -->
+  <section class="max-w-6xl mx-auto mb-16 pt-8">
+    <div class="mb-8">
+      <h1 class="text-4xl font-headline font-extrabold text-primary-container tracking-tight uppercase leading-none">Market Search</h1>
+      <p class="text-on-surface-variant mt-2 text-sm max-w-lg">Global price aggregation across 250+ marketplaces. Real-time arbitrage identification and inventory tracking.</p>
     </div>
-    <!-- Product Table -->
-    <div class="bg-surface-container-high overflow-hidden">
-      <div class="overflow-x-auto">
-        <table class="w-full text-left">
-          <thead><tr class="bg-surface-container-lowest text-[10px] font-bold text-on-surface-variant uppercase tracking-[.15em]">
-            <th class="px-5 py-3">Ürün</th>
-            <th class="px-5 py-3">Bizim Fiyat</th>
-            <th class="px-5 py-3">En Düşük Rakip</th>
-            <th class="px-5 py-3">Önerilen</th>
-            <th class="px-5 py-3">Rakip Sayısı</th>
-            <th class="px-5 py-3">Son Tarama</th>
-            <th class="px-5 py-3 text-right">İşlem</th>
-          </tr></thead>
-          <tbody id="trBody" class="divide-y divide-outline-variant/10">
-            <tr><td colspan="7" class="px-5 py-8 text-center text-on-surface-variant text-sm">Henüz ürün takip edilmiyor. "Ürün Takip Et" butonuna tıklayın.</td></tr>
-          </tbody>
-        </table>
+    
+    <!-- Search Bar Unit -->
+    <div class="bg-surface-container-low border border-outline-variant/20 p-1 flex items-center group focus-within:border-primary-container/50 transition-all shadow-xl">
+      <div class="px-6 text-on-surface-variant flex items-center">
+        <span class="material-symbols-outlined">search</span>
       </div>
+      <input id="serpQuery" class="bg-transparent border-none focus:ring-0 w-full py-6 text-xl font-body text-on-surface placeholder:text-on-surface-variant/40 outline-none" placeholder="Search product by name, EAN, or URL (e.g., Dyson)" type="text" onkeydown="if(event.key==='Enter')doSerpSearch()"/>
+      <button onclick="doSerpSearch()" class="bg-primary-container text-on-primary-container px-10 py-6 font-bold uppercase tracking-widest text-xs hover:brightness-110 active:opacity-80 transition-all sharp-edge">
+          Scan Market
+      </button>
     </div>
-  </div>
-</div>
+    
+    <!-- Filter Chips -->
+    <div class="flex gap-3 mt-4">
+      <button class="bg-surface-container text-[10px] font-bold uppercase tracking-widest text-on-surface-variant px-4 py-2 border border-outline-variant/10 hover:border-primary-container/30 transition-all" onclick="document.getElementById('serpQuery').value='Dyson'; doSerpSearch()">Trending: Dyson</button>
+      <button class="bg-surface-container text-[10px] font-bold uppercase tracking-widest text-on-surface-variant px-4 py-2 border border-outline-variant/10 hover:border-primary-container/30 transition-all" onclick="document.getElementById('serpQuery').value='PlayStation 5'; doSerpSearch()">Trending: PlayStation 5</button>
+      <button class="bg-surface-container text-[10px] font-bold uppercase tracking-widest text-on-surface-variant px-4 py-2 border border-outline-variant/10 hover:border-primary-container/30 transition-all" onclick="document.getElementById('serpQuery').value='Stanley'; doSerpSearch()">Trending: Stanley</button>
+    </div>
+  </section>
 
-<!-- TRACKER SEARCH MODAL -->
-<div class="fixed inset-0 bg-black/60 z-[200] hidden items-center justify-center backdrop-blur-sm" id="mTrackerSearch" onclick="if(event.target===this)closeM('mTrackerSearch')">
-  <div class="bg-surface-container-high max-w-3xl w-[95%] relative max-h-[92vh] overflow-y-auto">
-    <div class="p-6 border-b border-outline-variant/10 flex items-center justify-between">
-      <h3 class="font-headline text-xl font-bold">🔍 Piyasa Araştırması</h3>
-      <button onclick="closeM('mTrackerSearch')" class="text-on-surface-variant hover:text-on-surface text-xl bg-surface-container-lowest w-8 h-8 flex items-center justify-center">✕</button>
-    </div>
-    <div class="p-6">
-      <div class="flex gap-2 mb-4">
-        <input id="serpQuery" class="flex-1 bg-surface-container-lowest border border-outline-variant/20 text-on-surface text-sm p-3 outline-none focus:border-secondary" placeholder="Ürün adı girin... (örn: iPhone 15 Pro Max)" onkeydown="if(event.key==='Enter')doSerpSearch()"/>
-        <button onclick="doSerpSearch()" class="bg-secondary text-on-secondary-fixed px-6 py-3 text-xs font-bold uppercase tracking-wider">Ara</button>
-      </div>
-      <div id="serpResults" class="space-y-3">
-        <div class="text-center text-on-surface-variant text-sm py-8">Ürün adı girip arayın. Google Shopping TR üzerinden Trendyol, Hepsiburada, Amazon, Cimri, Akakçe fiyatlarını çekecek.</div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- TRACKER ADD MODAL -->
-<div class="fixed inset-0 bg-black/60 z-[200] hidden items-center justify-center backdrop-blur-sm" id="mTrackerAdd" onclick="if(event.target===this)closeM('mTrackerAdd')">
-  <div class="bg-surface-container-high max-w-lg w-[95%] relative max-h-[92vh] overflow-y-auto">
-    <div class="p-6 border-b border-outline-variant/10 flex items-center justify-between">
-      <h3 class="font-headline text-xl font-bold">Ürün Takibe Al</h3>
-      <button onclick="closeM('mTrackerAdd')" class="text-on-surface-variant hover:text-on-surface text-xl bg-surface-container-lowest w-8 h-8 flex items-center justify-center">✕</button>
-    </div>
-    <div class="p-6">
-      <div class="mb-4"><div class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-2">Ürün Adı</div><input id="trAddName" class="w-full bg-surface-container-lowest border border-outline-variant/20 text-on-surface text-sm p-3 outline-none" placeholder="iPhone 15 Pro Max 256GB"/></div>
-      <div class="mb-4"><div class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-2">Arama Terimi (opsiyonel)</div><input id="trAddQuery" class="w-full bg-surface-container-lowest border border-outline-variant/20 text-on-surface text-sm p-3 outline-none" placeholder="Boş bırakılırsa ürün adı kullanılır"/></div>
-      <div class="grid grid-cols-2 gap-4 mb-4">
-        <div><div class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-2">Bizim Fiyat (₺)</div><input id="trAddPrice" type="number" class="w-full bg-surface-container-lowest border border-outline-variant/20 text-on-surface text-sm p-3 outline-none" placeholder="0"/></div>
-        <div><div class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-2">Maliyet (₺)</div><input id="trAddCost" type="number" class="w-full bg-surface-container-lowest border border-outline-variant/20 text-on-surface text-sm p-3 outline-none" placeholder="0"/></div>
-      </div>
-      <div class="mb-4 p-4 bg-surface-container-lowest border border-outline-variant/10">
-        <div class="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3">Fiyat Stratejisi</div>
-        <div class="grid grid-cols-2 gap-3">
-          <div><div class="text-[9px] font-bold text-on-surface-variant uppercase mb-1">Rakibin altına (₺)</div><input id="trAddBeat" type="number" step="0.01" value="0.10" class="w-full bg-surface-container border-none text-on-surface text-sm p-2 outline-none"/></div>
-          <div><div class="text-[9px] font-bold text-on-surface-variant uppercase mb-1">Min. Kâr Marjı (%)</div><input id="trAddMargin" type="number" value="5" class="w-full bg-surface-container border-none text-on-surface text-sm p-2 outline-none"/></div>
-          <div><div class="text-[9px] font-bold text-on-surface-variant uppercase mb-1">Max Düşüş (%)</div><input id="trAddMaxDrop" type="number" value="30" class="w-full bg-surface-container border-none text-on-surface text-sm p-2 outline-none"/></div>
-          <div><div class="text-[9px] font-bold text-on-surface-variant uppercase mb-1">Platform</div><select id="trAddPlatform" class="w-full bg-surface-container border-none text-on-surface text-sm p-2 outline-none"><option value="">Bağlanmadı</option></select></div>
+  <!-- Search Results Grid -->
+  <section class="max-w-6xl mx-auto">
+    <div class="flex items-center justify-between mb-8 pb-4 border-b border-outline-variant/10">
+      <h2 class="text-xs font-bold uppercase tracking-[0.2em] text-on-surface-variant flex items-center gap-2">
+        <span class="w-1 h-3 bg-secondary"></span>
+        <span id="marketResultsTitle">My Armory (Tracked Products)</span>
+      </h2>
+      <div class="flex gap-4">
+        <!-- back button placeholder for SerpSearch logic -->
+        <div id="btnBackToModels" class="hidden">
+           <button class="text-[10px] font-bold text-on-surface-variant hover:text-primary transition-all flex items-center gap-1 uppercase" onclick="renderTrackerSearchGroups(LAST_BROAD_QUERY || '', LAST_BROAD_GROUPS)">
+            <span class="material-symbols-outlined text-xs">arrow_back</span> Back to Models
+           </button>
         </div>
       </div>
-      <div class="flex gap-3">
-        <button onclick="closeM('mTrackerAdd')" class="flex-1 py-3 border border-outline text-outline text-xs font-bold uppercase tracking-widest hover:border-on-surface hover:text-on-surface">İptal</button>
-        <button onclick="addTrackedProduct()" class="flex-1 py-3 bg-secondary text-on-secondary-fixed text-xs font-bold uppercase tracking-widest">+ Takibe Al</button>
-      </div>
-      <div id="trAddMsg" class="mt-3 text-xs hidden"></div>
     </div>
-  </div>
+    <div id="serpResults" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+       <!-- dynamic bento cards go here -->
+    </div>
+  </section>
 </div>
 
-<!-- TRACKER DETAIL MODAL -->
-<div class="fixed inset-0 bg-[#060e20]/95 z-[200] hidden items-center justify-center backdrop-blur-md" id="mTrackerDetail" onclick="if(event.target===this)closeM('mTrackerDetail')">
-  <div class="bg-surface-container max-w-4xl w-[95%] max-h-[92vh] overflow-y-auto relative border border-outline-variant/20">
-    <button onclick="closeM('mTrackerDetail')" class="absolute top-3 right-3 text-on-surface-variant hover:text-on-surface text-xl z-10 bg-surface-container-lowest w-8 h-8 flex items-center justify-center">✕</button>
-    <div id="mTrackerBody"><div class="py-16 text-center text-secondary text-xs font-bold uppercase tracking-widest animate-pulse">Yükleniyor...</div></div>
+<!-- PRODUCT DETAIL (Replaces mTrackerDetail) -->
+<div class="page" id="page-market-detail">
+  <div class="max-w-6xl mx-auto space-y-8 pt-8">
+    
+    <div class="flex items-center gap-4 mb-4">
+       <button class="text-on-surface-variant hover:text-white" onclick="showPage('market-search')"><span class="material-symbols-outlined">arrow_back</span></button>
+       <span class="text-on-surface-variant text-sm font-bold uppercase tracking-widest">Back to Market</span>
+    </div>
+
+    <!-- Top Section: Bento Grid -->
+    <div class="grid grid-cols-12 gap-6">
+      <!-- Product Image Gallery -->
+      <div class="col-span-5 bg-surface-container-low ghost-border p-6 relative">
+        <div class="absolute top-4 right-4 bg-secondary-container text-on-secondary-container px-3 py-1 font-bold text-[9px] uppercase tracking-wider z-10" id="detPlatBadge">INTERNAL</div>
+        <div class="aspect-square bg-surface-container flex items-center justify-center mb-4">
+          <img id="detImg" alt="Product Main" class="max-w-[80%] object-contain mix-blend-lighten" src=""/>
+        </div>
+      </div>
+      
+      <!-- Core Info -->
+      <div class="col-span-7 space-y-6">
+        <div class="bg-surface-container-low ghost-border p-8 h-full flex flex-col justify-between">
+          <div>
+            <div class="flex justify-between items-start mb-4">
+              <span id="detStatus" class="bg-secondary-container/20 text-secondary px-3 py-1 text-[10px] font-bold tracking-tighter uppercase rounded-full">Active Monitoring</span>
+              <span class="text-on-surface-variant text-[11px] font-mono" id="detSku">SKU: ---</span>
+            </div>
+            <h1 class="font-headline text-4xl font-extrabold text-white leading-none tracking-tighter mb-2" id="detName">Product Name</h1>
+            <p class="text-on-surface-variant font-body text-sm max-w-xl" id="detQuery">Search query: ---</p>
+          </div>
+          
+          <div class="grid grid-cols-2 gap-8 mt-12">
+            <div class="space-y-1">
+              <p class="text-on-surface-variant text-[11px] uppercase font-bold tracking-widest">Market Low Price</p>
+              <div class="flex items-baseline gap-2">
+                <span class="text-3xl font-headline font-extrabold text-secondary" id="detLowPrice">$0.00</span>
+                <span class="text-error text-xs font-bold" id="detLowSpread">---</span>
+              </div>
+            </div>
+            <div class="space-y-1">
+              <p class="text-on-surface-variant text-[11px] uppercase font-bold tracking-widest">Our Current Price</p>
+              <div class="flex items-baseline gap-2">
+                <span class="text-3xl font-headline font-extrabold text-primary" id="detOurPrice">$0.00</span>
+                <span class="text-on-surface-variant text-xs" id="detSuggPrice">Sugg: $0.00</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mt-auto pt-8">
+            <button onclick="if(confirm('Ürünü silmek istediğinize emin misiniz?')) deleteTrackedProduct(currentDetailId)" class="w-full border border-error/50 text-error hover:bg-error/10 font-headline font-extrabold py-4 uppercase tracking-tighter transition-all">
+              Remove Product
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Middle Section: Price History & Market Table -->
+    <div class="grid grid-cols-12 gap-6">
+      
+      <!-- Price History Chart -->
+      <div class="col-span-8 bg-surface-container-low ghost-border p-6 flex flex-col">
+        <div class="flex items-center justify-between mb-8">
+          <h3 class="font-headline font-extrabold text-lg uppercase tracking-tighter">Price Performance History</h3>
+          <div class="flex gap-2">
+            <span class="text-[10px] px-2 py-1 bg-surface-container-high border-b border-primary text-primary">7D</span>
+          </div>
+        </div>
+        <div class="flex-1 relative min-h-[300px] px-4 pb-8">
+           <canvas id="trackerChart"></canvas>
+        </div>
+      </div>
+      
+      <!-- Market Comparison Table -->
+      <div class="col-span-4 bg-surface-container-low ghost-border overflow-hidden">
+        <div class="p-6 bg-surface-container-lowest border-b border-outline-variant/10">
+          <h3 class="font-headline font-extrabold text-lg uppercase tracking-tighter">Market Comparison</h3>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left font-label text-sm">
+            <thead>
+              <tr class="bg-surface-container text-on-surface-variant text-[10px] uppercase font-bold tracking-widest">
+                <th class="px-6 py-4">Source</th>
+                <th class="px-4 py-4 text-right">Price</th>
+                <th class="px-4 py-4 text-center">URL</th>
+              </tr>
+            </thead>
+            <tbody id="detTableBody">
+              <!-- rows -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Section: Automation & Sync -->
+    <div class="bg-surface-container-low ghost-border p-8" id="detSyncContainer">
+      <div class="flex items-center justify-between mb-8">
+        <div>
+          <h3 class="font-headline font-extrabold text-xl uppercase tracking-tighter text-white">Automation &amp; Sync</h3>
+          <p class="text-on-surface-variant text-sm mt-1">Push price updates directly to your store endpoints.</p>
+        </div>
+        <div class="flex gap-4">
+          <div class="flex flex-col items-end">
+            <span class="text-[10px] text-on-surface-variant uppercase font-bold tracking-widest">Last Scan</span>
+            <span class="text-sm font-mono text-secondary" id="detLastSync">---</span>
+          </div>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-6">
+        
+        <!-- Shopify Card -->
+        <div class="bg-surface p-6 ghost-border flex items-center justify-between">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-surface-container-high flex items-center justify-center">
+              <span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">shopping_cart</span>
+            </div>
+            <div>
+              <h4 class="font-bold text-white tracking-tight">Shopify</h4>
+              <p class="text-xs text-on-surface-variant" id="detShopifyStatus">Idle</p>
+            </div>
+          </div>
+          <div id="detShopifyAction"></div>
+        </div>
+        
+        <!-- İkas Card -->
+        <div class="bg-surface p-6 ghost-border flex items-center justify-between">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-surface-container-high flex items-center justify-center">
+              <span class="material-symbols-outlined text-[#7C4DFF]" style="font-variation-settings: 'FILL' 1;">bolt</span>
+            </div>
+            <div>
+              <h4 class="font-bold text-white tracking-tight">İkas</h4>
+              <p class="text-xs text-on-surface-variant" id="detIkasStatus">Idle</p>
+            </div>
+          </div>
+          <div id="detIkasAction"></div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -598,7 +763,7 @@ function enterModule(mod){
     go('dashboard');
   } else if(mod==='tracker'){
     $('topTitle').textContent='Price Tracker — Obsidian Architect';
-    go('tracker-dash');
+    go('market-search');
     loadTrackedProducts();
   }
 }
@@ -615,7 +780,7 @@ function buildSidebar(mod){
       <button class="nav-btn w-full flex flex-col items-center py-3 text-outline hover:text-primary hover:bg-surface-container transition-colors" data-page="logs"><span class="material-symbols-outlined text-xl mb-1">history_edu</span><span class="text-[10px] font-bold uppercase tracking-wider font-headline">Logs</span></button>`;
   } else if(mod==='tracker'){
     nav.innerHTML=`
-      <button class="nav-btn w-full flex flex-col items-center py-3 text-outline hover:text-secondary hover:bg-surface-container transition-colors" data-page="tracker-dash"><span class="material-symbols-outlined text-xl mb-1">monitoring</span><span class="text-[10px] font-bold uppercase tracking-wider font-headline">Tracker</span></button>
+      <button class="nav-btn w-full flex flex-col items-center py-3 text-outline hover:text-secondary hover:bg-surface-container transition-colors" data-page="market-search"><span class="material-symbols-outlined text-xl mb-1">monitoring</span><span class="text-[10px] font-bold uppercase tracking-wider font-headline">Tracker</span></button>
       <button class="nav-btn w-full flex flex-col items-center py-3 text-outline hover:text-secondary hover:bg-surface-container transition-colors" data-page="integrations"><span class="material-symbols-outlined text-xl mb-1">settings_input_component</span><span class="text-[10px] font-bold uppercase tracking-wider font-headline">Integrate</span></button>
       <button class="nav-btn w-full flex flex-col items-center py-3 text-outline hover:text-secondary hover:bg-surface-container transition-colors" data-page="logs"><span class="material-symbols-outlined text-xl mb-1">history_edu</span><span class="text-[10px] font-bold uppercase tracking-wider font-headline">Logs</span></button>`;
   }
@@ -633,7 +798,7 @@ function go(page){
   }
   if(page==='products')fillPlatSel('prodPlatSel');
   if(page==='integrations')renderPlatCards();
-  if(page==='tracker-dash')loadTrackedProducts();
+  if(page==='market-search')loadTrackedProducts();
 }
 
 // ══ RATES ══
@@ -749,125 +914,130 @@ async function doSearch(){
 
 // ══ PRICE TRACKER ══
 async function loadTrackedProducts(){
+  const ticker = document.getElementById('tickerContent');
+  if(ticker) ticker.innerHTML = '<span class="text-[10px] font-bold text-secondary uppercase tracking-widest flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> VERİLER GÜNCELLENİYOR...</span>';
+
   try{
     const products=await(await fetch(API+'/api/tracker/products')).json();
     TRACKED_PRODUCTS=products;
-    renderTrackerTable();
-    // Stats
-    set('trTotal',products.length);
-    set('trBelow',products.filter(p=>(p.suggested_price||p.suggestedPrice)&&(p.suggested_price||p.suggestedPrice)<((p.lowest_competitor||p.lowestCompetitor)||Infinity)).length);
-    set('trDrop',products.filter(p=>(p.lowest_competitor||p.lowestCompetitor)&&(p.our_price||p.ourPrice)&&(p.lowest_competitor||p.lowestCompetitor)<(p.our_price||p.ourPrice)).length);
-    set('trSched',products.filter(p=>p.hasScheduler).length);
-    // SerpAPI status
-    try{const s=await(await fetch(API+'/api/tracker/status')).json();set('trSerp',s.serpAPI?'✓':'✗');}catch(e){set('trSerp','?');}
-  }catch(e){set('trTotal','0');}
+    renderTrackedProductsBento();
+    
+    if(ticker && products.length){
+      const tItems = products.slice(0, 5).map(p => {
+        const outP = p.our_price||p.ourPrice||0;
+        const lwst = p.lowest_competitor||p.lowestCompetitor||0;
+        const color = outP > lwst ? 'text-error' : 'text-secondary';
+        const bgDot = outP > lwst ? 'bg-error' : 'bg-secondary';
+        return `<span class="text-[10px] font-bold ${color} uppercase tracking-widest flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full ${bgDot}"></span> ${p.name.slice(0,15)}: ${fTRY(lwst)}</span>`;
+      });
+      ticker.innerHTML = tItems.join(' <span class="mx-4 text-outline-variant">•</span> ');
+    }
+  }catch(e){console.error(e);}
 }
 
-function renderTrackerTable(){
-  const tb=$('trBody');
+function renderTrackedProductsBento() {
+  const tStr = 'My Armory (Tracked Products)';
+  const tEl = document.getElementById('marketResultsTitle');
+  if(tEl) tEl.textContent = tStr;
+  const bEl = document.getElementById('btnBackToModels');
+  if(bEl) bEl.classList.add('hidden');
+  const sEl = document.getElementById('serpQuery');
+  if(sEl) sEl.value = '';
+  
+  const container = document.getElementById('serpResults');
+  if(!container)return;
   if(!TRACKED_PRODUCTS.length){
-    tb.innerHTML='<tr><td colspan="7" class="px-5 py-8 text-center text-on-surface-variant text-sm">Henüz ürün takip edilmiyor.</td></tr>';return;
+     container.innerHTML='<div class="col-span-full py-16 text-center text-on-surface-variant text-sm border-2 border-dashed border-outline-variant/20">Henüz ürün takip edilmiyor. Piyasa araması yaparak ürün ekleyebilirsiniz.</div>';
+     return;
   }
-  tb.innerHTML=TRACKED_PRODUCTS.map(p=>{
+  
+  container.innerHTML = TRACKED_PRODUCTS.map(p => {
     const ourPrice=p.our_price||p.ourPrice||0;
     const lowestComp=p.lowest_competitor||p.lowestCompetitor||0;
     const suggested=p.suggested_price||p.suggestedPrice||0;
-    const competitors=p.last_competitors||p.lastCompetitors||[];
-    const compCount=p.competitor_count||p.competitorCount||0;
-    const lastScan=p.last_scan_at||p.lastScanAt;
-    const hasSched=p.hasScheduler;
-    const isBelow=lowestComp&&ourPrice&&lowestComp<ourPrice;
-    const diff=suggested&&ourPrice?suggested-ourPrice:null;
-    return`<tr class="hover:bg-surface-container-lowest transition-colors cursor-pointer group" onclick="openTrackerDetail('${p.id}')">
-      <td class="px-5 py-4"><div class="font-bold text-xs">${p.name}</div><div class="text-[10px] text-on-surface-variant">${(p.search_query||p.searchQuery||'')!==p.name?(p.search_query||p.searchQuery||''):''}</div></td>
-      <td class="px-5 py-4 font-mono font-bold text-sm">${fTRY(ourPrice)}</td>
-      <td class="px-5 py-4 font-mono text-sm ${isBelow?'text-error font-bold':'text-on-surface-variant'}">${fTRY(lowestComp)}</td>
-      <td class="px-5 py-4"><span class="font-mono font-bold text-sm ${diff&&diff<0?'text-error':'text-secondary'}">${fTRY(suggested)}</span>${diff?`<span class="text-[10px] text-on-surface-variant ml-1">${diff>0?'+':''}${Math.round(diff)}₺</span>`:''}</td>
-      <td class="px-5 py-4"><div class="flex flex-wrap gap-1">${competitors.slice(0,4).map(c=>`<span class="plat-badge plat-${c.platform}">${c.platform}</span>`).join('')}<span class="text-[10px] text-on-surface-variant ml-1">${compCount}</span></div></td>
-      <td class="px-5 py-4 text-[10px] text-on-surface-variant">${lastScan?new Date(lastScan).toLocaleTimeString('tr-TR'):'—'} ${hasSched?'<span class="text-secondary font-bold">⏰</span>':''}</td>
-      <td class="px-5 py-4 text-right"><div class="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-        <button onclick="event.stopPropagation();scanProduct('${p.id}')" class="px-2 py-1 bg-secondary/20 text-secondary text-[10px] font-bold">🔍 Tara</button>
-        <button onclick="event.stopPropagation();deleteTracked('${p.id}')" class="px-2 py-1 bg-error/20 text-error text-[10px] font-bold">✗</button>
-      </div></td>
-    </tr>`;
+    
+    return `
+    <div class="bg-surface-container-low border border-outline-variant/15 hover:border-primary-container/40 transition-all group overflow-hidden">
+      <div class="p-6">
+        <div class="flex justify-between items-start mb-2">
+          <span class="text-[10px] font-bold uppercase text-on-surface-variant tracking-widest">TRACKED</span>
+          <span class="text-[10px] ${ourPrice > lowestComp ? 'text-error' : 'text-secondary'} font-bold">${ourPrice > lowestComp ? '▼ BEATEN' : '▲ WINNING'}</span>
+        </div>
+        <h3 class="text-xl font-headline font-extrabold text-on-surface leading-tight mb-6 truncate" title="${p.name}">${p.name}</h3>
+        <div class="grid grid-cols-2 gap-4 mb-6">
+          <div class="bg-surface-container p-3 border-b-2 border-primary-container/20">
+            <p class="text-[9px] uppercase font-bold text-on-surface-variant mb-1">Our Price</p>
+            <p class="text-lg font-headline font-extrabold text-primary-container">${fTRY(ourPrice)}</p>
+          </div>
+          <div class="bg-surface-container p-3 border-b-2 border-outline-variant/20">
+            <p class="text-[9px] uppercase font-bold text-on-surface-variant mb-1">Market Low</p>
+            <p class="text-lg font-headline font-extrabold text-on-surface">${fTRY(lowestComp)}</p>
+          </div>
+        </div>
+        <button onclick="openTrackerDetail('${p.id}')" class="w-full bg-surface-container-high border border-primary-container/40 text-primary-container py-3 font-bold uppercase text-[10px] tracking-[0.15em] hover:bg-primary-container hover:text-on-primary-container transition-all sharp-edge">
+            View Details
+        </button>
+      </div>
+    </div>`;
   }).join('');
 }
 
 function renderTrackerSearchGroups(query,groups){
-  const ikasPlat=findFirstPlatformByType('ikas');
-  const shopifyPlat=findFirstPlatformByType('shopify');
-  $('serpResults').innerHTML=`
-    <div class="mb-4 p-3 bg-surface-container-lowest border-l-2 border-secondary">
-      <div class="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant mb-1">Önce model seç</div>
-      <div class="text-sm text-on-surface-variant">"${query}" araması birden fazla modele dağıldı. Önce doğru modeli seç, sonra sadece o modelin rakip fiyatlarını gör.</div>
-    </div>
-    <div class="space-y-3">
-      ${groups.map((g,idx)=>`
-        <div class="p-4 bg-surface-container-high border border-outline-variant/10">
-          <div class="flex gap-4 items-start">
-            ${g.image?`<img src="${g.image}" class="w-14 h-14 object-cover bg-surface-container-lowest flex-shrink-0">`:`<div class="w-14 h-14 bg-surface-container-lowest flex items-center justify-center text-xl flex-shrink-0">🛒</div>`}
-            <div class="flex-1 min-w-0">
-              <div class="font-headline font-extrabold text-lg">${g.displayName||g.sampleNames?.[0]||query}</div>
-              <div class="text-[11px] text-on-surface-variant mt-1">${g.sampleNames.join(' • ')}</div>
-              <div class="flex flex-wrap gap-4 mt-3 text-xs">
-                <div><span class="text-on-surface-variant">En düşük:</span> <strong class="text-secondary">${fTRY(g.lowestPrice)}</strong></div>
-                <div><span class="text-on-surface-variant">En yüksek:</span> <strong>${fTRY(g.highestPrice)}</strong></div>
-                <div><span class="text-on-surface-variant">Satıcı:</span> <strong>${g.items.length}</strong></div>
-              </div>
-            </div>
+  document.getElementById('marketResultsTitle').textContent = `Market Results (${groups.length} models)`;
+  document.getElementById('btnBackToModels').classList.add('hidden');
+  
+  $('serpResults').innerHTML= groups.map((g,idx)=>`
+    <div class="bg-surface-container-low border border-outline-variant/15 hover:border-primary-container/40 transition-all group overflow-hidden">
+      <div class="relative h-64 w-full bg-surface-container-lowest flex items-center justify-center p-8">
+        ${g.image ? `<img src="${g.image}" alt="${g.displayName||query}" class="w-full h-full object-contain grayscale group-hover:grayscale-0 transition-all duration-500 scale-90 group-hover:scale-100">` : `<div class="text-4xl text-on-surface-variant">🛒</div>`}
+        <div class="absolute top-4 right-4 bg-secondary-container text-on-secondary-container text-[9px] font-black px-2 py-1 uppercase tracking-tighter">Model</div>
+      </div>
+      <div class="p-6">
+        <h3 class="text-xl font-headline font-extrabold text-on-surface leading-tight mb-6 truncate">${g.displayName||g.sampleNames?.[0]||query}</h3>
+        <div class="grid grid-cols-2 gap-4 mb-6">
+          <div class="bg-surface-container p-3 border-b-2 border-primary-container/20">
+            <p class="text-[9px] uppercase font-bold text-on-surface-variant mb-1">Market Low</p>
+            <p class="text-lg font-headline font-extrabold text-primary-container">${fTRY(g.lowestPrice)}</p>
           </div>
-          <div class="grid grid-cols-1 md:grid-cols-4 gap-2 mt-4">
-            <button onclick="doSerpSearch('${escJS(g.displayName||g.sampleNames?.[0]||query)}', true)" class="py-3 bg-surface-container-lowest text-on-surface text-xs font-bold uppercase">Modeli İncele</button>
-            <button onclick="prefillTracker('${escJS(g.displayName||g.sampleNames?.[0]||query)}',${g.lowestPrice||0},'${escJS(g.query||g.displayName||query)}')" class="py-3 bg-secondary text-on-secondary-fixed text-xs font-bold uppercase">Takibe Al</button>
-            ${ikasPlat?`<button onclick="quickExportTrackerCandidate('${escJS(ikasPlat.id)}',${idx})" class="py-3 bg-[#00cfb4] text-[#06231f] text-xs font-bold uppercase">ikas'a aktar</button>`:`<div class="py-3 bg-surface-container-lowest text-center text-[10px] text-on-surface-variant uppercase">ikas bağlı değil</div>`}
-            ${shopifyPlat?`<button onclick="quickExportTrackerCandidate('${escJS(shopifyPlat.id)}',${idx})" class="py-3 bg-[#95bf47] text-[#0d1b05] text-xs font-bold uppercase">Shopify'a aktar</button>`:`<div class="py-3 bg-surface-container-lowest text-center text-[10px] text-on-surface-variant uppercase">Shopify bağlı değil</div>`}
+          <div class="bg-surface-container p-3 border-b-2 border-outline-variant/20">
+            <p class="text-[9px] uppercase font-bold text-on-surface-variant mb-1">Competitors</p>
+            <p class="text-lg font-headline font-extrabold text-on-surface">${g.items.length}</p>
           </div>
-        </div>`).join('')}
-    </div>`;
+        </div>
+        <button onclick="doSerpSearch('${escJS(g.displayName||g.sampleNames?.[0]||query)}', true)" class="w-full bg-surface-container-high border border-primary-container/40 text-primary-container py-3 font-bold uppercase text-[10px] tracking-[0.15em] hover:bg-primary-container hover:text-on-primary-container transition-all sharp-edge">
+            Analyze Market
+        </button>
+      </div>
+    </div>`).join('');
 }
+
 function renderTrackerSearchGroupDetail(idx){
   const group=LAST_TRACKER_MODEL_GROUPS[idx];
   if(!group)return;
-  const ikasPlat=findFirstPlatformByType('ikas');
-  const shopifyPlat=findFirstPlatformByType('shopify');
-  $('serpResults').innerHTML=`
-    <div class="flex items-center justify-between gap-3 mb-4 p-3 bg-surface-container-lowest border-l-2 border-secondary">
-      <div>
-        <div class="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Seçilen model</div>
-        <div class="font-headline font-extrabold text-lg">${group.displayName||group.sampleNames?.[0]||LAST_TRACKER_SEARCH?.query||''}</div>
+  
+  document.getElementById('marketResultsTitle').textContent = `Target: ${group.displayName||LAST_TRACKER_SEARCH?.query||''}`;
+  document.getElementById('btnBackToModels').classList.remove('hidden');
+
+  $('serpResults').innerHTML= group.items.map(r=>`
+    <div class="bg-surface-container-low border border-outline-variant/15 hover:border-primary-container/40 transition-all group overflow-hidden">
+      <div class="relative h-48 w-full bg-surface-container-lowest flex items-center justify-center p-4 content-center">
+        ${r.image ? `<img src="${r.image}" class="max-h-full object-contain grayscale group-hover:grayscale-0 transition-all duration-500 scale-90 group-hover:scale-100">` : `<div class="text-3xl text-on-surface-variant">🛒</div>`}
       </div>
-      <button onclick="renderTrackerSearchGroups('${escJS(LAST_BROAD_QUERY||'')}',LAST_BROAD_GROUPS)" class="px-4 py-2 bg-surface-container text-xs font-bold uppercase">← Modeller</button>
-    </div>
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
-      <div class="p-3 bg-surface-container-lowest border-l-2 border-secondary"><div class="text-[10px] uppercase text-on-surface-variant font-bold">En düşük</div><div class="font-headline font-extrabold text-xl text-secondary">${fTRY(group.lowestPrice)}</div></div>
-      <div class="p-3 bg-surface-container-lowest border-l-2 border-primary"><div class="text-[10px] uppercase text-on-surface-variant font-bold">En yüksek</div><div class="font-headline font-extrabold text-xl text-primary">${fTRY(group.highestPrice)}</div></div>
-      <div class="p-3 bg-surface-container-lowest border-l-2 border-tertiary"><div class="text-[10px] uppercase text-on-surface-variant font-bold">Satıcı</div><div class="font-headline font-extrabold text-xl text-tertiary">${group.items.length}</div></div>
-      <div class="p-3 bg-surface-container-lowest border-l-2 border-outline"><div class="text-[10px] uppercase text-on-surface-variant font-bold">Kaynak</div><div class="font-headline font-extrabold text-xl">${group.sourceCount}</div></div>
-    </div>
-    <div class="space-y-2">
-      ${group.items.map(r=>`
-        <div class="flex items-center gap-4 p-3 bg-surface-container-high hover:bg-surface-bright transition-colors border-l-2 ${r.priceTRY===group.lowestPrice?'border-secondary':'border-transparent'}">
-          ${r.image?`<img src="${r.image}" class="w-12 h-12 object-cover flex-shrink-0">`:'<div class="w-12 h-12 bg-surface-container-lowest flex items-center justify-center text-xl">🛒</div>'}
-          <div class="flex-1 min-w-0">
-            <div class="font-bold text-xs">${r.name}</div>
-            <div class="flex items-center gap-2 mt-1">
-              <span class="plat-badge plat-${r.platform}">${r.source}</span>
-              ${r.rating?`<span class="text-[10px] text-primary">★ ${r.rating}</span>`:''}
-              ${r.delivery?`<span class="text-[10px] text-on-surface-variant">${r.delivery}</span>`:''}
-            </div>
-          </div>
-          <div class="text-right flex-shrink-0">
-            <div class="font-headline font-extrabold text-lg ${r.priceTRY===group.lowestPrice?'text-secondary':'text-on-surface'}">${fTRY(r.priceTRY)}</div>
-            ${r.link?`<a href="${r.link}" target="_blank" class="text-[9px] text-primary hover:underline">Satıcıya git →</a>`:''}
-          </div>
-        </div>`).join('')}
-    </div>
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-2 mt-4">
-      <button onclick="prefillTracker('${escJS(group.displayName||group.sampleNames?.[0]||LAST_TRACKER_SEARCH?.query||'')}',${group.lowestPrice||0},'${escJS(group.query||group.displayName||LAST_TRACKER_SEARCH?.query||'')}')" class="py-3 bg-secondary text-on-secondary-fixed text-xs font-bold uppercase">Takibe Al</button>
-      ${ikasPlat?`<button onclick="quickExportTrackerCandidate('${escJS(ikasPlat.id)}',${idx})" class="py-3 bg-[#00cfb4] text-[#06231f] text-xs font-bold uppercase">ikas'a aktar</button>`:`<div class="py-3 bg-surface-container-lowest text-center text-[10px] text-on-surface-variant uppercase">ikas bağlı değil</div>`}
-      ${shopifyPlat?`<button onclick="quickExportTrackerCandidate('${escJS(shopifyPlat.id)}',${idx})" class="py-3 bg-[#95bf47] text-[#0d1b05] text-xs font-bold uppercase">Shopify'a aktar</button>`:`<div class="py-3 bg-surface-container-lowest text-center text-[10px] text-on-surface-variant uppercase">Shopify bağlı değil</div>`}
-      <button onclick="renderTrackerSearchGroups('${escJS(LAST_BROAD_QUERY||'')}',LAST_BROAD_GROUPS)" class="py-3 bg-surface-container-lowest text-on-surface text-xs font-bold uppercase">Modellere dön</button>
-    </div>`;
+      <div class="p-6">
+        <div class="flex justify-between items-start mb-2">
+          <span class="text-[10px] font-bold uppercase text-on-surface-variant tracking-widest">${r.source}</span>
+          ${r.priceTRY===group.lowestPrice?'<span class="bg-secondary-container text-on-secondary-container text-[9px] px-2 py-0.5 rounded-full font-bold">BEST PRICE</span>':''}
+        </div>
+        <h3 class="text-sm font-body font-bold text-on-surface leading-tight mb-4 line-clamp-2" title="${r.name}">${r.name}</h3>
+        <div class="flex flex-col mb-4">
+          <p class="text-xl font-headline font-extrabold ${r.priceTRY===group.lowestPrice?'text-secondary':'text-on-surface'}">${fTRY(r.priceTRY)}</p>
+          ${r.link?`<a href="${r.link}" target="_blank" class="text-[10px] text-primary hover:underline mt-1">Go to Store →</a>`:''}
+        </div>
+        <button onclick="prefillTracker('${escJS(group.displayName||LAST_TRACKER_SEARCH?.query||'')}',${group.lowestPrice||0},'${escJS(group.query||LAST_TRACKER_SEARCH?.query||'')}')" class="w-full bg-secondary text-on-secondary-fixed py-3 font-bold uppercase text-[10px] tracking-[0.15em] hover:brightness-110 transition-all sharp-edge">
+            Track Product
+        </button>
+      </div>
+    </div>`).join('');
 }
 async function quickExportTrackerCandidate(platformId,groupIdx){
   const group=LAST_TRACKER_MODEL_GROUPS[groupIdx];
@@ -977,9 +1147,14 @@ async function deleteTracked(id){
   loadTrackedProducts();
 }
 
+let currentDetailId = null;
+function showPage(p) { go(p); }
+
 async function openTrackerDetail(id){
-  openM('mTrackerDetail');
-  $('mTrackerBody').innerHTML='<div class="py-16 text-center text-secondary text-xs animate-pulse">Yükleniyor...</div>';
+  currentDetailId = id;
+  showPage('market-detail');
+  $('detStatus').textContent = 'Loading...';
+  
   try{
     const p=await(await fetch(API+'/api/tracker/products/'+id)).json();
     if(p.error)throw new Error(p.error);
@@ -987,85 +1162,90 @@ async function openTrackerDetail(id){
     const competitors=p.last_competitors||p.lastCompetitors||[];
     const history=p.price_history||p.priceHistory||[];
     const ourPrice=p.our_price||p.ourPrice||0;
-    const costPrice=p.cost_price||p.costPrice||0;
     const lowestComp=p.lowest_competitor||p.lowestCompetitor||0;
     const suggested=p.suggested_price||p.suggestedPrice||0;
-    const compCount=p.competitor_count||p.competitorCount||0;
     const lastScan=p.last_scan_at||p.lastScanAt;
     const searchQ=p.search_query||p.searchQuery||p.name;
-    const isBelow=lowestComp&&ourPrice&&lowestComp<ourPrice;
+    const isBelow=(lowestComp&&ourPrice&&lowestComp<ourPrice);
     
     const hasPlatformLink = !!(p.platform_id || p.platformId);
     const hasCreatedPlatformProduct = !!(p.platform_product_id || p.platformProductId);
-    const ptNameObj = hasPlatformLink ? PLATS.find(x => x.id === (p.platform_id || p.platformId)) : null;
-    const platformName = ptNameObj ? ptNameObj.name : 'Platform';
     const activeIkas = findFirstPlatformByType('ikas');
     const activeShopify = findFirstPlatformByType('shopify');
     
-    $('mTrackerBody').innerHTML=`
-    <div class="p-6 border-b border-outline-variant/10">
-      <h2 class="font-headline text-2xl font-extrabold text-on-surface mb-1">${p.name}</h2>
-      <p class="text-[10px] text-on-surface-variant uppercase tracking-wider">Arama: "${searchQ}" · ${compCount} rakip · Son: ${lastScan?new Date(lastScan).toLocaleString('tr-TR'):'—'}</p>
-    </div>
-    <div class="grid grid-cols-4 gap-4 p-6 border-b border-outline-variant/10">
-      <div class="bg-surface-container-lowest p-4 border-l-2 border-primary"><p class="text-[9px] font-bold text-on-surface-variant uppercase mb-1">Bizim Fiyat</p><p class="text-xl font-headline font-extrabold text-primary">${fTRY(ourPrice)}</p></div>
-      <div class="bg-surface-container-lowest p-4 border-l-2 ${isBelow?'border-error':'border-secondary'}"><p class="text-[9px] font-bold text-on-surface-variant uppercase mb-1">En Düşük Rakip</p><p class="text-xl font-headline font-extrabold ${isBelow?'text-error':'text-secondary'}">${fTRY(lowestComp)}</p></div>
-      <div class="bg-surface-container-lowest p-4 border-l-2 border-secondary"><p class="text-[9px] font-bold text-on-surface-variant uppercase mb-1">Önerilen</p><p class="text-xl font-headline font-extrabold text-secondary">${fTRY(suggested)}</p></div>
-      <div class="bg-surface-container-lowest p-4 border-l-2 border-tertiary"><p class="text-[9px] font-bold text-on-surface-variant uppercase mb-1">Maliyet</p><p class="text-xl font-headline font-extrabold text-tertiary">${fTRY(costPrice)}</p></div>
-    </div>
-    <div class="p-6 border-b border-outline-variant/10">
-      <div class="flex justify-between items-center mb-3">
-        <h3 class="font-headline font-bold text-sm uppercase">Rakip Fiyatları</h3>
-        <button onclick="scanProduct('${p.id}');closeM('mTrackerDetail');setTimeout(()=>openTrackerDetail('${p.id}'),3000)" class="bg-secondary text-on-secondary-fixed px-4 py-1 text-[10px] font-bold uppercase">🔍 Yeniden Tara</button>
-      </div>
-      <div class="space-y-2">
-        ${competitors.length?competitors.map((c,i)=>`
-          <div class="flex items-center justify-between p-3 bg-surface-container-high border-l-2 ${i===0&&c.priceTRY===(lowestComp||0)?'border-secondary':'border-transparent'} hover:bg-surface-bright">
-            <div class="flex items-center gap-3">
-              ${c.image?`<img src="${c.image}" class="w-8 h-8 object-cover flex-shrink-0">`:''}
-              <div>
-                <div class="font-bold text-xs">${(c.name||'').slice(0,50)}</div>
-                <span class="plat-badge plat-${c.platform}">${c.source||c.platform}</span>
-              </div>
-            </div>
-            <div class="font-headline font-extrabold text-lg ${c.priceTRY===(lowestComp||0)?'text-secondary':'text-on-surface'}">${fTRY(c.priceTRY)}</div>
-          </div>`).join(''):'<div class="text-on-surface-variant text-sm text-center py-4">Rakip verisi yok</div>'}
-      </div>
-    </div>
-    ${history.length>1?`<div class="p-6 border-b border-outline-variant/10">
-      <h3 class="font-headline font-bold text-sm uppercase mb-3">Fiyat Geçmişi</h3>
-      <div style="height:200px"><canvas id="trackerChart"></canvas></div>
-    </div>`:''}
-    <div class="p-6">
-      <div class="p-4 bg-surface-container-lowest border border-outline-variant/10 mb-4">
-        <div class="text-[10px] font-bold uppercase tracking-wider text-secondary mb-2">Strateji Ayarları</div>
-        <div class="grid grid-cols-3 gap-4 text-xs">
-          <div><span class="text-on-surface-variant">Rakibin altına:</span> <strong>${p.rules?.beatByAmount||0}₺</strong></div>
-          <div><span class="text-on-surface-variant">Min. Marj:</span> <strong>%${p.rules?.minMarginPercent||5}</strong></div>
-          <div><span class="text-on-surface-variant">Max Düşüş:</span> <strong>%${p.rules?.maxDropPercent||30}</strong></div>
-        </div>
-      </div>
-      <div class="flex flex-wrap gap-3">
-        ${!hasCreatedPlatformProduct && activeIkas ? `<button onclick="createTrackedPlatformProduct('${p.id}', '${activeIkas.id}')" class="flex-1 py-3 bg-[#00cfb4] text-[#06231f] text-xs font-bold uppercase whitespace-nowrap">+ ikas'a aktar/oluştur</button>` : ''}
-        ${!hasCreatedPlatformProduct && activeShopify ? `<button onclick="createTrackedPlatformProduct('${p.id}', '${activeShopify.id}')" class="flex-1 py-3 bg-[#95bf47] text-[#0d1b05] text-xs font-bold uppercase whitespace-nowrap">+ Shopify'a aktar/oluştur</button>` : ''}
-        ${hasPlatformLink && hasCreatedPlatformProduct && suggested ? `<button onclick="pushTrackedPrice('${p.id}',${suggested})" class="flex-1 py-3 bg-secondary text-on-secondary-fixed text-xs font-bold uppercase whitespace-nowrap">↑ Fiyat Gönder (${fTRY(suggested)})</button>` : ''}
-        ${!hasPlatformLink && !activeIkas && !activeShopify ? `<button onclick="closeM('mTrackerDetail');openM('mAddPlat')" class="flex-1 py-3 bg-surface-container text-on-surface text-[10px] font-bold uppercase whitespace-nowrap">Platform Ekle</button>` : ''}
-        <button onclick="deleteTracked('${p.id}');closeM('mTrackerDetail')" class="px-4 py-3 border border-error text-error text-xs font-bold uppercase">Sil</button>
-      </div>
-    </div>`;
+    // Core info
+    $('detStatus').textContent = p.auto_sync ? 'Active Monitoring' : 'Idle Monitoring';
+    $('detName').textContent = p.name;
+    $('detSku').textContent = 'SKU: ' + id;
+    $('detQuery').textContent = `Search Query: "${searchQ}"`;
+    $('detLowPrice').textContent = fTRY(lowestComp);
+    $('detOurPrice').textContent = fTRY(ourPrice);
+    $('detSuggPrice').textContent = 'Sugg: ' + fTRY(suggested);
     
-    // Chart
-    if(history.length>1){
-      setTimeout(()=>{
-        const ctx=$('trackerChart');if(!ctx)return;
-        const labels=history.map(h=>new Date(h.ts).toLocaleDateString('tr-TR',{day:'numeric',month:'short'}));
-        new Chart(ctx,{type:'line',data:{labels,datasets:[
-          {label:'En Düşük Rakip',data:history.map(h=>h.lowestPrice),borderColor:'#ef4444',borderWidth:2,tension:.4,pointRadius:2,fill:false},
-          {label:'Ortalama',data:history.map(h=>h.avgPrice),borderColor:'#4edea3',borderWidth:2,tension:.4,pointRadius:2,fill:false,borderDash:[5,3]}
-        ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:'#a08e7a',font:{size:10}}}},scales:{x:{grid:{display:false},ticks:{font:{size:9},color:'#a08e7a'}},y:{grid:{color:'rgba(83,68,52,.15)'},ticks:{font:{size:9},color:'#a08e7a',callback:v=>v.toLocaleString('tr-TR')+'₺'}}}}});
-      },100);
+    if(ourPrice && lowestComp) {
+       const spread = ((lowestComp - ourPrice) / ourPrice * 100).toFixed(1);
+       const span = $('detLowSpread');
+       span.textContent = spread + '%';
+       span.className = `text-xs font-bold ${spread > 0 ? 'text-secondary' : 'text-error'}`;
     }
-  }catch(e){$('mTrackerBody').innerHTML=`<div class="py-16 text-center text-error text-sm">${e.message}</div>`;}
+
+    // Image
+    if(competitors[0] && competitors[0].image) {
+       $('detImg').src = competitors[0].image;
+    } else {
+       $('detImg').src = "https://lh3.googleusercontent.com/aida-public/AB6AXuDI12gOVw9kEKeSzHuMBdTVa8cT2ALvTCL2DDBuENWaDuCMmNPd72j5ReEPIknpfY6JKE-UXRZreqyX1O7cR1y4WkK9QjO77Av0l-iQQepPrMky7nhY9kl4dnSAzoaDSQmcUPloY23Veol8xTgtWO6mVUlMPUDVZxYFXBAerb33JuIDAJ_b4qIpAYLb30NYMIa-Uupz7Qhefa7KyK9o-7Bm-e-zKCVAZh_WRw2T6-xxoIPR-1qkYp-EPzzcl4maXlh75fFCqx0bwts"; // fallback mock watch
+    }
+
+    $('detLastSync').textContent = lastScan ? new Date(lastScan).toLocaleTimeString('tr-TR') : 'Never';
+    
+    // Market Compare Table
+    $('detTableBody').innerHTML = competitors.map(c => `
+      <tr class="bg-surface hover:bg-surface-bright/10 transition-colors">
+        <td class="px-6 py-4 font-semibold text-white">${c.source||c.platform}</td>
+        <td class="px-4 py-4 text-right text-secondary font-mono">${fTRY(c.priceTRY)}</td>
+        <td class="px-4 py-4 text-center">
+          ${c.link?`<a href="${c.link}" target="_blank" class="text-primary hover:underline">Link</a>`:'-'}
+        </td>
+      </tr>
+    `).join('');
+
+    // Chart Update
+    const ctx=$('trackerChart');
+    if(window._chartInst) window._chartInst.destroy();
+    if(history.length>1 && ctx){
+        const labels=history.map(h=>new Date(h.ts).toLocaleDateString('tr-TR',{day:'numeric',month:'short'}));
+        window._chartInst = new Chart(ctx,{type:'line',data:{labels,datasets:[
+          {label:'Market Low',data:history.map(h=>h.lowestPrice),borderColor:'#ef4444',borderWidth:2,tension:.4,pointRadius:2,fill:false},
+          {label:'Avg Price',data:history.map(h=>h.avgPrice),borderColor:'#4edea3',borderWidth:2,tension:.4,pointRadius:2,fill:false,borderDash:[5,3]}
+        ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:'#a08e7a',font:{size:10}}}},scales:{x:{grid:{display:false},ticks:{font:{size:9},color:'#a08e7a'}},y:{grid:{color:'rgba(83,68,52,.15)'},ticks:{font:{size:9},color:'#a08e7a',callback:v=>v.toLocaleString('tr-TR')+'₺'}}}}});
+    }
+
+    // Shopify / Ikas sync setup
+    if(!activeShopify) {
+       $('detShopifyStatus').textContent = "Not connected";
+       $('detShopifyAction').innerHTML = `<button onclick="go('integrations')" class="text-[10px] text-outline underline">Connect</button>`;
+    } else {
+       $('detShopifyStatus').textContent = `Connected`;
+       if(hasCreatedPlatformProduct) {
+           $('detShopifyAction').innerHTML = `<button onclick="pushTrackedPrice('${p.id}',${suggested})" class="bg-surface-container-high text-secondary font-bold px-4 py-2 text-[10px] uppercase tracking-widest border-b border-secondary hover:bg-surface-container-highest transition-all">Publish ${fTRY(suggested)}</button>`;
+       } else {
+           $('detShopifyAction').innerHTML = `<button onclick="createTrackedPlatformProduct('${p.id}', '${activeShopify.id}')" class="bg-surface-container-high text-primary font-bold px-4 py-2 text-[10px] uppercase tracking-widest border-b border-primary hover:bg-surface-container-highest transition-all">Create Product</button>`;
+       }
+    }
+
+    if(!activeIkas) {
+       $('detIkasStatus').textContent = "Not connected";
+       $('detIkasAction').innerHTML = `<button onclick="go('integrations')" class="text-[10px] text-outline underline">Connect</button>`;
+    } else {
+       $('detIkasStatus').textContent = `Connected`;
+       if(hasCreatedPlatformProduct) {
+           $('detIkasAction').innerHTML = `<button onclick="pushTrackedPrice('${p.id}',${suggested})" class="bg-surface-container-high text-secondary font-bold px-4 py-2 text-[10px] uppercase tracking-widest border-b border-secondary hover:bg-surface-container-highest transition-all">Publish ${fTRY(suggested)}</button>`;
+       } else {
+           $('detIkasAction').innerHTML = `<button onclick="createTrackedPlatformProduct('${p.id}', '${activeIkas.id}')" class="bg-surface-container-high text-primary font-bold px-4 py-2 text-[10px] uppercase tracking-widest border-b border-primary hover:bg-surface-container-highest transition-all">Create Product</button>`;
+       }
+    }
+
+  }catch(e){console.error(e);}
 }
 </script>
 </body>
