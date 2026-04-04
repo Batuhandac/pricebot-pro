@@ -600,19 +600,19 @@ app.post('/api/tracker/products', requireAuth, async(req, res) => {
     id: `tp_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
     user_id: req.userId,
     name,
-    searchQuery: searchQuery || name,
-    ourPrice: ourPrice || 0,
-    costPrice: costPrice || 0,
-    platformId: platformId || null,
+    search_query: searchQuery || name,
+    our_price: ourPrice || 0,
+    cost_price: costPrice || 0,
+    platform_id: platformId || null,
     rules: rules || { beatByAmount: 0.10, minMarginPercent: 5, maxDropPercent: 30 },
-    suggestedPrice: null,
-    lowestCompetitor: null,
-    lastCompetitors: [],
-    priceHistory: [],
-    lastScanAt: null,
-    competitorCount: 0,
-    autoSync: false,
-    schedulerMinutes: 60,
+    suggested_price: null,
+    lowest_competitor: null,
+    last_competitors: [],
+    price_history: [],
+    last_scan_at: null,
+    competitor_count: 0,
+    auto_sync: false,
+    scheduler_minutes: 60,
     created_at: new Date().toISOString()
   };
   
@@ -624,27 +624,39 @@ app.post('/api/tracker/products', requireAuth, async(req, res) => {
     }
     
     // İlk tarama yap
-    const serpData = await serpAPISearch(product.searchQuery);
-    product.lastCompetitors = (serpData.results || []).slice(0, 20);
-    product.competitorCount = serpData.results?.length || 0;
+    const serpData = await serpAPISearch(product.search_query);
+    product.last_competitors = (serpData.results || []).slice(0, 20);
+    product.competitor_count = serpData.results?.length || 0;
     
     if (serpData.results?.length && product.rules) {
-      const calc = calculateBeatPrice(serpData.results, { ...product.rules, currentPrice: product.ourPrice });
+      const calc = calculateBeatPrice(serpData.results, { ...product.rules, currentPrice: product.our_price });
       if (calc) {
-        product.suggestedPrice = calc.suggestedPrice;
-        product.lowestCompetitor = calc.lowestCompetitor;
-        product.lastScanAt = new Date().toISOString();
+        product.suggested_price = calc.suggestedPrice;
+        product.lowest_competitor = calc.lowestCompetitor;
+        product.last_scan_at = new Date().toISOString();
       }
     }
     
-    product.priceHistory.push({
+    product.price_history = [{
       ts: new Date().toISOString(),
       lowestPrice: serpData.lowestPrice,
       avgPrice: serpData.avgPrice,
       competitors: (serpData.results || []).slice(0, 10).map(c => ({ source: c.source, platform: c.platform, price: c.priceTRY }))
-    });
+    }];
     
-    db.saveTrackedProduct(product);
+    // Supabase'e güncelle
+    if (hasSupabase) {
+      await sbQuery('tracked_products', 'PATCH', {
+        last_competitors: product.last_competitors,
+        competitor_count: product.competitor_count,
+        suggested_price: product.suggested_price,
+        lowest_competitor: product.lowest_competitor,
+        last_scan_at: product.last_scan_at,
+        price_history: product.price_history
+      }, `?id=eq.${product.id}`);
+    } else {
+      db.saveTrackedProduct(product);
+    }
     addLog('tracker', 'TRACKER', `${name} takibe alındı — ${serpData.results?.length || 0} rakip`, 'success');
     res.json({ ok: true, product });
   } catch(e) {
@@ -676,8 +688,15 @@ app.get('/api/tracker/products', requireAuth, async(req, res) => {
 // Tek ürün detay
 app.get('/api/tracker/products/:id', requireAuth, async(req, res) => {
   try {
-    const p = db.getTrackedProduct(req.params.id, req.userId);
-    if (!p) return res.status(404).json({ error: 'Bulunamadı' });
+    let p;
+    if (hasSupabase) {
+      const rows = await sbQuery('tracked_products', 'GET', null, `?id=eq.${req.params.id}&user_id=eq.${req.userId}`);
+      if (!rows.length) return res.status(404).json({ error: 'Bulunamadı' });
+      p = rows[0];
+    } else {
+      p = db.getTrackedProduct(req.params.id, req.userId);
+      if (!p) return res.status(404).json({ error: 'Bulunamadı' });
+    }
     res.json(p);
   } catch(e) {
     res.status(500).json({ error: e.message });
@@ -702,7 +721,11 @@ app.patch('/api/tracker/products/:id', requireAuth, async(req, res) => {
 app.delete('/api/tracker/products/:id', requireAuth, async(req, res) => {
   try {
     stopTrackerScheduler(req.params.id);
-    db.deleteTrackedProduct(req.params.id);
+    if (hasSupabase) {
+      await sbQuery('tracked_products', 'DELETE', null, `?id=eq.${req.params.id}&user_id=eq.${req.userId}`);
+    } else {
+      db.deleteTrackedProduct(req.params.id);
+    }
     res.json({ ok: true });
   } catch(e) {
     res.status(500).json({ error: e.message });
@@ -712,33 +735,51 @@ app.delete('/api/tracker/products/:id', requireAuth, async(req, res) => {
 // Manuel tarama tetikle
 app.post('/api/tracker/products/:id/scan', requireAuth, async(req, res) => {
   try {
-    const p = db.getTrackedProduct(req.params.id, req.userId);
-    if (!p) return res.status(404).json({ error: 'Bulunamadı' });
-    
-    const serpData = await serpAPISearch(p.searchQuery || p.name);
-    p.lastCompetitors = (serpData.results || []).slice(0, 20);
-    p.competitorCount = serpData.results?.length || 0;
-    p.lastScanAt = new Date().toISOString();
-    
-    if (serpData.results?.length && p.rules) {
-      const calc = calculateBeatPrice(serpData.results, { ...p.rules, currentPrice: p.ourPrice });
-      if (calc) {
-        p.suggestedPrice = calc.suggestedPrice;
-        p.lowestCompetitor = calc.lowestCompetitor;
-      }
+    let p;
+    if (hasSupabase) {
+      const rows = await sbQuery('tracked_products', 'GET', null, `?id=eq.${req.params.id}&user_id=eq.${req.userId}`);
+      if (!rows.length) return res.status(404).json({ error: 'Bulunamadı' });
+      p = rows[0];
+    } else {
+      p = db.getTrackedProduct(req.params.id, req.userId);
+      if (!p) return res.status(404).json({ error: 'Bulunamadı' });
     }
     
-    if (!p.priceHistory) p.priceHistory = [];
-    p.priceHistory.push({
+    const serpData = await serpAPISearch(p.search_query || p.name);
+    const competitors = (serpData.results || []).slice(0, 20);
+    const history = Array.isArray(p.price_history) ? p.price_history : [];
+    
+    history.push({
       ts: new Date().toISOString(),
       lowestPrice: serpData.lowestPrice,
       avgPrice: serpData.avgPrice,
       competitors: (serpData.results || []).slice(0, 10).map(c => ({ source: c.source, platform: c.platform, price: c.priceTRY }))
     });
-    if (p.priceHistory.length > 100) p.priceHistory = p.priceHistory.slice(-100);
+    if (history.length > 100) history.splice(0, history.length - 100);
     
-    db.saveTrackedProduct(p);
-    res.json({ ok: true, product: p, serpData });
+    const updates = {
+      last_competitors: competitors,
+      competitor_count: serpData.results?.length || 0,
+      last_scan_at: new Date().toISOString(),
+      price_history: history
+    };
+    
+    if (serpData.results?.length && p.rules) {
+      const calc = calculateBeatPrice(serpData.results, { ...p.rules, currentPrice: p.our_price || 0 });
+      if (calc) {
+        updates.suggested_price = calc.suggestedPrice;
+        updates.lowest_competitor = calc.lowestCompetitor;
+      }
+    }
+    
+    if (hasSupabase) {
+      await sbQuery('tracked_products', 'PATCH', updates, `?id=eq.${p.id}`);
+    } else {
+      Object.assign(p, updates);
+      db.saveTrackedProduct(p);
+    }
+    
+    res.json({ ok: true, product: { ...p, ...updates }, serpData });
   } catch(e) {
     res.status(500).json({ error: e.message });
   }

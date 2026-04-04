@@ -697,8 +697,8 @@ async function loadTrackedProducts(){
     renderTrackerTable();
     // Stats
     set('trTotal',products.length);
-    set('trBelow',products.filter(p=>p.suggestedPrice&&p.suggestedPrice<(p.lowestCompetitor||Infinity)).length);
-    set('trDrop',products.filter(p=>p.lowestCompetitor&&p.ourPrice&&p.lowestCompetitor<p.ourPrice).length);
+    set('trBelow',products.filter(p=>(p.suggested_price||p.suggestedPrice)&&(p.suggested_price||p.suggestedPrice)<((p.lowest_competitor||p.lowestCompetitor)||Infinity)).length);
+    set('trDrop',products.filter(p=>(p.lowest_competitor||p.lowestCompetitor)&&(p.our_price||p.ourPrice)&&(p.lowest_competitor||p.lowestCompetitor)<(p.our_price||p.ourPrice)).length);
     set('trSched',products.filter(p=>p.hasScheduler).length);
     // SerpAPI status
     try{const s=await(await fetch(API+'/api/tracker/status')).json();set('trSerp',s.serpAPI?'✓':'✗');}catch(e){set('trSerp','?');}
@@ -711,15 +711,22 @@ function renderTrackerTable(){
     tb.innerHTML='<tr><td colspan="7" class="px-5 py-8 text-center text-on-surface-variant text-sm">Henüz ürün takip edilmiyor.</td></tr>';return;
   }
   tb.innerHTML=TRACKED_PRODUCTS.map(p=>{
-    const isBelow=p.lowestCompetitor&&p.ourPrice&&p.lowestCompetitor<p.ourPrice;
-    const diff=p.suggestedPrice&&p.ourPrice?p.suggestedPrice-p.ourPrice:null;
+    const ourPrice=p.our_price||p.ourPrice||0;
+    const lowestComp=p.lowest_competitor||p.lowestCompetitor||0;
+    const suggested=p.suggested_price||p.suggestedPrice||0;
+    const competitors=p.last_competitors||p.lastCompetitors||[];
+    const compCount=p.competitor_count||p.competitorCount||0;
+    const lastScan=p.last_scan_at||p.lastScanAt;
+    const hasSched=p.hasScheduler;
+    const isBelow=lowestComp&&ourPrice&&lowestComp<ourPrice;
+    const diff=suggested&&ourPrice?suggested-ourPrice:null;
     return`<tr class="hover:bg-surface-container-lowest transition-colors cursor-pointer group" onclick="openTrackerDetail('${p.id}')">
-      <td class="px-5 py-4"><div class="font-bold text-xs">${p.name}</div><div class="text-[10px] text-on-surface-variant">${p.searchQuery!==p.name?p.searchQuery:''}</div></td>
-      <td class="px-5 py-4 font-mono font-bold text-sm">${fTRY(p.ourPrice)}</td>
-      <td class="px-5 py-4 font-mono text-sm ${isBelow?'text-error font-bold':'text-on-surface-variant'}">${fTRY(p.lowestCompetitor)}</td>
-      <td class="px-5 py-4"><span class="font-mono font-bold text-sm ${diff&&diff<0?'text-error':'text-secondary'}">${fTRY(p.suggestedPrice)}</span>${diff?`<span class="text-[10px] text-on-surface-variant ml-1">${diff>0?'+':''}${Math.round(diff)}₺</span>`:''}</td>
-      <td class="px-5 py-4"><div class="flex flex-wrap gap-1">${(p.lastCompetitors||[]).slice(0,4).map(c=>`<span class="plat-badge plat-${c.platform}">${c.platform}</span>`).join('')}<span class="text-[10px] text-on-surface-variant ml-1">${p.competitorCount||0}</span></div></td>
-      <td class="px-5 py-4 text-[10px] text-on-surface-variant">${p.lastScanAt?new Date(p.lastScanAt).toLocaleTimeString('tr-TR'):'—'} ${p.hasScheduler?'<span class="text-secondary font-bold">⏰</span>':''}</td>
+      <td class="px-5 py-4"><div class="font-bold text-xs">${p.name}</div><div class="text-[10px] text-on-surface-variant">${(p.search_query||p.searchQuery||'')!==p.name?(p.search_query||p.searchQuery||''):''}</div></td>
+      <td class="px-5 py-4 font-mono font-bold text-sm">${fTRY(ourPrice)}</td>
+      <td class="px-5 py-4 font-mono text-sm ${isBelow?'text-error font-bold':'text-on-surface-variant'}">${fTRY(lowestComp)}</td>
+      <td class="px-5 py-4"><span class="font-mono font-bold text-sm ${diff&&diff<0?'text-error':'text-secondary'}">${fTRY(suggested)}</span>${diff?`<span class="text-[10px] text-on-surface-variant ml-1">${diff>0?'+':''}${Math.round(diff)}₺</span>`:''}</td>
+      <td class="px-5 py-4"><div class="flex flex-wrap gap-1">${competitors.slice(0,4).map(c=>`<span class="plat-badge plat-${c.platform}">${c.platform}</span>`).join('')}<span class="text-[10px] text-on-surface-variant ml-1">${compCount}</span></div></td>
+      <td class="px-5 py-4 text-[10px] text-on-surface-variant">${lastScan?new Date(lastScan).toLocaleTimeString('tr-TR'):'—'} ${hasSched?'<span class="text-secondary font-bold">⏰</span>':''}</td>
       <td class="px-5 py-4 text-right"><div class="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
         <button onclick="event.stopPropagation();scanProduct('${p.id}')" class="px-2 py-1 bg-secondary/20 text-secondary text-[10px] font-bold">🔍 Tara</button>
         <button onclick="event.stopPropagation();deleteTracked('${p.id}')" class="px-2 py-1 bg-error/20 text-error text-[10px] font-bold">✗</button>
@@ -814,20 +821,27 @@ async function openTrackerDetail(id){
     const p=await(await fetch(API+'/api/tracker/products/'+id)).json();
     if(p.error)throw new Error(p.error);
     
-    const competitors=p.lastCompetitors||[];
-    const history=p.priceHistory||[];
-    const isBelow=p.lowestCompetitor&&p.ourPrice&&p.lowestCompetitor<p.ourPrice;
+    const competitors=p.last_competitors||p.lastCompetitors||[];
+    const history=p.price_history||p.priceHistory||[];
+    const ourPrice=p.our_price||p.ourPrice||0;
+    const costPrice=p.cost_price||p.costPrice||0;
+    const lowestComp=p.lowest_competitor||p.lowestCompetitor||0;
+    const suggested=p.suggested_price||p.suggestedPrice||0;
+    const compCount=p.competitor_count||p.competitorCount||0;
+    const lastScan=p.last_scan_at||p.lastScanAt;
+    const searchQ=p.search_query||p.searchQuery||p.name;
+    const isBelow=lowestComp&&ourPrice&&lowestComp<ourPrice;
     
     $('mTrackerBody').innerHTML=`
     <div class="p-6 border-b border-outline-variant/10">
       <h2 class="font-headline text-2xl font-extrabold text-on-surface mb-1">${p.name}</h2>
-      <p class="text-[10px] text-on-surface-variant uppercase tracking-wider">Arama: "${p.searchQuery}" · ${p.competitorCount||0} rakip · Son: ${p.lastScanAt?new Date(p.lastScanAt).toLocaleString('tr-TR'):'—'}</p>
+      <p class="text-[10px] text-on-surface-variant uppercase tracking-wider">Arama: "${searchQ}" · ${compCount} rakip · Son: ${lastScan?new Date(lastScan).toLocaleString('tr-TR'):'—'}</p>
     </div>
     <div class="grid grid-cols-4 gap-4 p-6 border-b border-outline-variant/10">
-      <div class="bg-surface-container-lowest p-4 border-l-2 border-primary"><p class="text-[9px] font-bold text-on-surface-variant uppercase mb-1">Bizim Fiyat</p><p class="text-xl font-headline font-extrabold text-primary">${fTRY(p.ourPrice)}</p></div>
-      <div class="bg-surface-container-lowest p-4 border-l-2 ${isBelow?'border-error':'border-secondary'}"><p class="text-[9px] font-bold text-on-surface-variant uppercase mb-1">En Düşük Rakip</p><p class="text-xl font-headline font-extrabold ${isBelow?'text-error':'text-secondary'}">${fTRY(p.lowestCompetitor)}</p></div>
-      <div class="bg-surface-container-lowest p-4 border-l-2 border-secondary"><p class="text-[9px] font-bold text-on-surface-variant uppercase mb-1">Önerilen</p><p class="text-xl font-headline font-extrabold text-secondary">${fTRY(p.suggestedPrice)}</p></div>
-      <div class="bg-surface-container-lowest p-4 border-l-2 border-tertiary"><p class="text-[9px] font-bold text-on-surface-variant uppercase mb-1">Maliyet</p><p class="text-xl font-headline font-extrabold text-tertiary">${fTRY(p.costPrice)}</p></div>
+      <div class="bg-surface-container-lowest p-4 border-l-2 border-primary"><p class="text-[9px] font-bold text-on-surface-variant uppercase mb-1">Bizim Fiyat</p><p class="text-xl font-headline font-extrabold text-primary">${fTRY(ourPrice)}</p></div>
+      <div class="bg-surface-container-lowest p-4 border-l-2 ${isBelow?'border-error':'border-secondary'}"><p class="text-[9px] font-bold text-on-surface-variant uppercase mb-1">En Düşük Rakip</p><p class="text-xl font-headline font-extrabold ${isBelow?'text-error':'text-secondary'}">${fTRY(lowestComp)}</p></div>
+      <div class="bg-surface-container-lowest p-4 border-l-2 border-secondary"><p class="text-[9px] font-bold text-on-surface-variant uppercase mb-1">Önerilen</p><p class="text-xl font-headline font-extrabold text-secondary">${fTRY(suggested)}</p></div>
+      <div class="bg-surface-container-lowest p-4 border-l-2 border-tertiary"><p class="text-[9px] font-bold text-on-surface-variant uppercase mb-1">Maliyet</p><p class="text-xl font-headline font-extrabold text-tertiary">${fTRY(costPrice)}</p></div>
     </div>
     <div class="p-6 border-b border-outline-variant/10">
       <div class="flex justify-between items-center mb-3">
@@ -836,7 +850,7 @@ async function openTrackerDetail(id){
       </div>
       <div class="space-y-2">
         ${competitors.length?competitors.map((c,i)=>`
-          <div class="flex items-center justify-between p-3 bg-surface-container-high border-l-2 ${i===0&&c.priceTRY===(p.lowestCompetitor||0)?'border-secondary':'border-transparent'} hover:bg-surface-bright">
+          <div class="flex items-center justify-between p-3 bg-surface-container-high border-l-2 ${i===0&&c.priceTRY===(lowestComp||0)?'border-secondary':'border-transparent'} hover:bg-surface-bright">
             <div class="flex items-center gap-3">
               ${c.image?`<img src="${c.image}" class="w-8 h-8 object-cover flex-shrink-0">`:''}
               <div>
@@ -844,7 +858,7 @@ async function openTrackerDetail(id){
                 <span class="plat-badge plat-${c.platform}">${c.source||c.platform}</span>
               </div>
             </div>
-            <div class="font-headline font-extrabold text-lg ${c.priceTRY===(p.lowestCompetitor||0)?'text-secondary':'text-on-surface'}">${fTRY(c.priceTRY)}</div>
+            <div class="font-headline font-extrabold text-lg ${c.priceTRY===(lowestComp||0)?'text-secondary':'text-on-surface'}">${fTRY(c.priceTRY)}</div>
           </div>`).join(''):'<div class="text-on-surface-variant text-sm text-center py-4">Rakip verisi yok</div>'}
       </div>
     </div>
@@ -862,7 +876,7 @@ async function openTrackerDetail(id){
         </div>
       </div>
       <div class="flex gap-3">
-        ${p.suggestedPrice?`<button onclick="alert('Platform push özelliği aktif edilmeli')" class="flex-1 py-3 bg-secondary text-on-secondary-fixed text-xs font-bold uppercase">↑ Platforma Gönder (${fTRY(p.suggestedPrice)})</button>`:''}
+        ${suggested?`<button onclick="alert('Platform push özelliği aktif edilmeli')" class="flex-1 py-3 bg-secondary text-on-secondary-fixed text-xs font-bold uppercase">↑ Platforma Gönder (${fTRY(suggested)})</button>`:''}
         <button onclick="deleteTracked('${p.id}');closeM('mTrackerDetail')" class="px-4 py-3 border border-error text-error text-xs font-bold uppercase">Sil</button>
       </div>
     </div>`;
