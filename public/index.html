@@ -624,7 +624,18 @@ function titleCaseTR(v){return String(v||'').split(' ').filter(Boolean).map(w=>w
 function findFirstPlatformByType(type){return (PLATS||[]).find(p=>p.type===type)||null;}
 function trackerModelKeyFromName(name='',query=''){
   let s=String(name||'').toLowerCase();
-  const qTokens=String(query||'').toLowerCase().split(/\s+/).filter(t=>t.length>2);
+  let qStr=String(query||'').toLowerCase();
+  
+  const unneeded = ['kılıf','kilif','case','koruyucu','kablo','cable','adaptör','adaptor','şarj','sarj','silikon','deri','cüzdan'];
+  const queryHasUnneeded = unneeded.some(u => qStr.includes(u));
+  const nameHasUnneeded = unneeded.some(u => s.includes(u));
+  
+  // If the user didn't specifically search for an accessory, but the product is one, bucket it away
+  if (!queryHasUnneeded && nameHasUnneeded) {
+    return 'Kılıf & Aksesuar';
+  }
+
+  const qTokens=qStr.split(/\s+/).filter(t=>t.length>2);
   const removable=new Set([
     'stanley','termos','termosu','vacuum','vakumlu','mug','cup','tumbler','bardak','matara',
     'drinkware','taşı','tasi','taşi','tasima','taşıma','resmi','orijinal','çelik','pipetli','with','ve',
@@ -1084,12 +1095,30 @@ async function doSerpSearch(overrideQuery=null, isModelInspect=false){
   }catch(e){$('serpResults').innerHTML=`<div class="py-4 text-center text-error text-sm">${e.message}</div>`;}
 }
 
-function prefillTracker(name,price,searchQuery){
-  closeM('mTrackerSearch');
-  $('trAddName').value=name;
-  $('trAddQuery').value=searchQuery||name;
-  $('trAddPrice').value=Math.round(price*0.98);
-  openM('mTrackerAdd');
+async function prefillTracker(name,price,searchQuery){
+  const bn = window.event ? window.event.currentTarget : null;
+  if(bn){ bn.disabled=true; bn.innerHTML='Takip Ediliyor...'; }
+  try {
+    const d = await(await fetch(API+'/api/tracker/products',{
+      method:'POST',
+      headers:hdr(),
+      body:JSON.stringify({
+        name: name,
+        searchQuery: searchQuery || name,
+        ourPrice: Math.round((price||0)*0.98),
+        costPrice: Math.round((price||0)*0.8),
+        platformId: null,
+        rules: { beatByAmount: 1, minMarginPercent: 5, maxDropPercent: 30 }
+      })
+    })).json();
+    if(d.error) throw new Error(d.error);
+    
+    await loadTrackedProducts();
+    openTrackerDetail(d.product.id);
+  } catch(e) {
+    alert('Ekleme Hatası: ' + e.message);
+    if(bn){ bn.disabled=false; bn.innerHTML='Track Product'; }
+  }
 }
 
 async function createTrackedPlatformProduct(id, platformId=null){
