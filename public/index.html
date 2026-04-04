@@ -448,6 +448,8 @@ let PLATS=[],PRODS=[],PRESULTS={},TCG='pokemon',CADDED=0;
 let TRACKED_PRODUCTS=[];
 let LAST_TRACKER_SEARCH=null;
 let LAST_TRACKER_MODEL_GROUPS=[];
+let LAST_BROAD_QUERY=null;
+let LAST_BROAD_GROUPS=[];
 
 const $=id=>document.getElementById(id);
 function set(id,v){const e=$(id);if(e)e.textContent=v;}
@@ -815,7 +817,7 @@ function renderTrackerSearchGroups(query,groups){
             </div>
           </div>
           <div class="grid grid-cols-1 md:grid-cols-4 gap-2 mt-4">
-            <button onclick="renderTrackerSearchGroupDetail(${idx})" class="py-3 bg-surface-container-lowest text-on-surface text-xs font-bold uppercase">Modeli İncele</button>
+            <button onclick="doSerpSearch('${escJS(g.displayName||g.sampleNames?.[0]||query)}', true)" class="py-3 bg-surface-container-lowest text-on-surface text-xs font-bold uppercase">Modeli İncele</button>
             <button onclick="prefillTracker('${escJS(g.displayName||g.sampleNames?.[0]||query)}',${g.lowestPrice||0},'${escJS(g.query||g.displayName||query)}')" class="py-3 bg-secondary text-on-secondary-fixed text-xs font-bold uppercase">Takibe Al</button>
             ${ikasPlat?`<button onclick="quickExportTrackerCandidate('${escJS(ikasPlat.id)}',${idx})" class="py-3 bg-[#00cfb4] text-[#06231f] text-xs font-bold uppercase">ikas'a aktar</button>`:`<div class="py-3 bg-surface-container-lowest text-center text-[10px] text-on-surface-variant uppercase">ikas bağlı değil</div>`}
             ${shopifyPlat?`<button onclick="quickExportTrackerCandidate('${escJS(shopifyPlat.id)}',${idx})" class="py-3 bg-[#95bf47] text-[#0d1b05] text-xs font-bold uppercase">Shopify'a aktar</button>`:`<div class="py-3 bg-surface-container-lowest text-center text-[10px] text-on-surface-variant uppercase">Shopify bağlı değil</div>`}
@@ -834,7 +836,7 @@ function renderTrackerSearchGroupDetail(idx){
         <div class="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Seçilen model</div>
         <div class="font-headline font-extrabold text-lg">${group.displayName||group.sampleNames?.[0]||LAST_TRACKER_SEARCH?.query||''}</div>
       </div>
-      <button onclick="renderTrackerSearchGroups('${escJS(LAST_TRACKER_SEARCH?.query||'')}',LAST_TRACKER_MODEL_GROUPS)" class="px-4 py-2 bg-surface-container text-xs font-bold uppercase">← Modeller</button>
+      <button onclick="renderTrackerSearchGroups('${escJS(LAST_BROAD_QUERY||'')}',LAST_BROAD_GROUPS)" class="px-4 py-2 bg-surface-container text-xs font-bold uppercase">← Modeller</button>
     </div>
     <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
       <div class="p-3 bg-surface-container-lowest border-l-2 border-secondary"><div class="text-[10px] uppercase text-on-surface-variant font-bold">En düşük</div><div class="font-headline font-extrabold text-xl text-secondary">${fTRY(group.lowestPrice)}</div></div>
@@ -864,7 +866,7 @@ function renderTrackerSearchGroupDetail(idx){
       <button onclick="prefillTracker('${escJS(group.displayName||group.sampleNames?.[0]||LAST_TRACKER_SEARCH?.query||'')}',${group.lowestPrice||0},'${escJS(group.query||group.displayName||LAST_TRACKER_SEARCH?.query||'')}')" class="py-3 bg-secondary text-on-secondary-fixed text-xs font-bold uppercase">Takibe Al</button>
       ${ikasPlat?`<button onclick="quickExportTrackerCandidate('${escJS(ikasPlat.id)}',${idx})" class="py-3 bg-[#00cfb4] text-[#06231f] text-xs font-bold uppercase">ikas'a aktar</button>`:`<div class="py-3 bg-surface-container-lowest text-center text-[10px] text-on-surface-variant uppercase">ikas bağlı değil</div>`}
       ${shopifyPlat?`<button onclick="quickExportTrackerCandidate('${escJS(shopifyPlat.id)}',${idx})" class="py-3 bg-[#95bf47] text-[#0d1b05] text-xs font-bold uppercase">Shopify'a aktar</button>`:`<div class="py-3 bg-surface-container-lowest text-center text-[10px] text-on-surface-variant uppercase">Shopify bağlı değil</div>`}
-      <button onclick="renderTrackerSearchGroups('${escJS(LAST_TRACKER_SEARCH?.query||'')}',LAST_TRACKER_MODEL_GROUPS)" class="py-3 bg-surface-container-lowest text-on-surface text-xs font-bold uppercase">Modellere dön</button>
+      <button onclick="renderTrackerSearchGroups('${escJS(LAST_BROAD_QUERY||'')}',LAST_BROAD_GROUPS)" class="py-3 bg-surface-container-lowest text-on-surface text-xs font-bold uppercase">Modellere dön</button>
     </div>`;
 }
 async function quickExportTrackerCandidate(platformId,groupIdx){
@@ -884,8 +886,10 @@ async function quickExportTrackerCandidate(platformId,groupIdx){
     alert('Ürün platforma aktarıldı: '+fTRY(r.priceTRY||group.lowestPrice||0));
   }catch(e){alert('Aktarım hatası: '+e.message);}
 }
-async function doSerpSearch(){
-  const q=$('serpQuery').value.trim();if(!q)return;
+async function doSerpSearch(overrideQuery=null, isModelInspect=false){
+  const q= overrideQuery || $('serpQuery').value.trim();
+  if(!q)return;
+  $('serpQuery').value = q;
   $('serpResults').innerHTML='<div class="py-8 text-center text-secondary text-xs animate-pulse">Google Shopping TR taranıyor...</div>';
   try{
     const d=await(await fetch(API+'/api/tracker/search',{method:'POST',headers:hdr(),body:JSON.stringify({query:q})})).json();
@@ -893,7 +897,13 @@ async function doSerpSearch(){
     if(!d.results?.length){$('serpResults').innerHTML='<div class="py-4 text-center text-on-surface-variant text-sm">Sonuç bulunamadı.</div>';return;}
     LAST_TRACKER_SEARCH=d;
     LAST_TRACKER_MODEL_GROUPS=groupTrackerSearchResults(d.results,q);
-    if(LAST_TRACKER_MODEL_GROUPS.length<=1){
+    
+    if(!isModelInspect) {
+      LAST_BROAD_QUERY = q;
+      LAST_BROAD_GROUPS = [...LAST_TRACKER_MODEL_GROUPS];
+    }
+    
+    if(LAST_TRACKER_MODEL_GROUPS.length<=1 || isModelInspect){
       renderTrackerSearchGroupDetail(0);
       return;
     }
