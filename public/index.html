@@ -311,8 +311,9 @@ body{background:#0b1326;color:#dae2fd;font-family:'Inter',sans-serif;margin:0;ov
       <div class="col-span-5 bg-surface-container-low ghost-border p-6 relative">
         <div class="absolute top-4 right-4 bg-secondary-container text-on-secondary-container px-3 py-1 font-bold text-[9px] uppercase tracking-wider z-10" id="detPlatBadge">INTERNAL</div>
         <div class="aspect-square bg-surface-container flex items-center justify-center mb-4">
-          <img id="detImg" alt="Product Main" class="max-w-[80%] object-contain mix-blend-lighten" src=""/>
+          <img id="detImg" alt="Product Main" class="max-w-[80%] max-h-[80%] object-contain mix-blend-lighten" src=""/>
         </div>
+        <div id="detImgGallery" class="flex gap-2 overflow-x-auto pb-2 custom-scrollbar"></div>
       </div>
       
       <!-- Core Info -->
@@ -325,9 +326,10 @@ body{background:#0b1326;color:#dae2fd;font-family:'Inter',sans-serif;margin:0;ov
             </div>
             <h1 class="font-headline text-4xl font-extrabold text-white leading-none tracking-tighter mb-2" id="detName">Product Name</h1>
             <p class="text-on-surface-variant font-body text-sm max-w-xl" id="detQuery">Search query: ---</p>
+            <div id="detTags" class="flex flex-wrap gap-2 mt-4"></div>
           </div>
           
-          <div class="grid grid-cols-2 gap-8 mt-12">
+          <div class="grid grid-cols-2 gap-8 mt-6">
             <div class="space-y-1">
               <p class="text-on-surface-variant text-[11px] uppercase font-bold tracking-widest">Market Low Price</p>
               <div class="flex items-baseline gap-2">
@@ -911,15 +913,52 @@ function setTCG(game,el){
   TCG=game;
   document.querySelectorAll('.cat-tab').forEach(t=>{t.classList.remove('text-primary-container','border-primary-container');t.classList.add('text-outline','border-transparent');});
   el.classList.remove('text-outline','border-transparent');el.classList.add('text-primary-container','border-primary-container');
-  $('catGrid').innerHTML='<div class="col-span-full py-12 text-center text-on-surface-variant text-sm">Arama yapın.</div>';
+  $('catQ').value=''; // clear query
+  if (game === 'pokemon') {
+    loadSets();
+  } else {
+    $('catGrid').innerHTML='<div class="col-span-full py-12 text-center text-on-surface-variant text-sm">Arama yapın.</div>';
+  }
   set('catHeroTitle',{pokemon:'Pokémon Market',yugioh:'Yu-Gi-Oh Market',magic:'MTG Market',onepiece:'One Piece Market',sealed:'Sealed Products',sport:'Sports Cards'}[game]||game);
 }
+async function loadSets(){
+  $('catGrid').innerHTML='<div class="col-span-full py-12 text-center text-primary-container text-xs animate-pulse">Setler yükleniyor...</div>';
+  try{
+    const sets = await(await fetch(API+'/api/catalog/pokemon/sets')).json();
+    if(sets.error) throw new Error(sets.error);
+    const sorted = Array.isArray(sets) ? sets.filter(s=>s.logo).reverse().slice(0, 50) : [];
+    $('catGrid').innerHTML=sorted.map(s=>`
+      <div class="bg-surface-container-high border border-outline-variant/10 hover:border-primary/50 cursor-pointer flex flex-col p-4 items-center justify-center h-48 group transition-all" onclick="document.getElementById('catQ').value='set.id:${s.id}'; doSearch();">
+        ${s.logo?`<img src="${s.logo}.png" class="max-w-[80%] max-h-[60%] object-contain scale-95 group-hover:scale-100 transition-transform" alt="${s.name}">`:`<h4 class="font-bold text-center">${s.name}</h4>`}
+        <p class="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest mt-6">${s.name}</p>
+        <p class="text-[9px] text-primary-fixed-dim/60 font-bold uppercase tracking-widest mt-1">${s.cardCount.total} Kart</p>
+      </div>`).join('');
+  }catch(e){
+    $('catGrid').innerHTML=`<div class="col-span-full py-8 text-center text-error text-sm">${e.message}</div>`;
+  }
+}
+
 async function doSearch(){
-  const q=$('catQ').value.trim();if(!q)return;
+  const q=$('catQ').value.trim();
+  if(!q && TCG==='pokemon'){ loadSets(); return; }
+  else if(!q) return;
+
   $('catGrid').innerHTML='<div class="col-span-full py-12 text-center text-primary-container text-xs animate-pulse">Aranıyor...</div>';
   try{
     let cards=[];
-    if(TCG==='pokemon'){const list=await(await fetch(API+'/api/catalog/pokemon/search?q='+encodeURIComponent(q))).json();cards=(list||[]).slice(0,20).map(c=>({id:c.id,name:c.name,image:c.image?c.image+'/high.png':null,set:c.set?.name||'',rarity:c.rarity||''}));}
+    if(TCG==='pokemon'){
+      if(q.startsWith('set.id:')){
+         const setId = q.replace('set.id:','');
+         const setDat = await(await fetch(API+'/api/catalog/pokemon/set/'+setId)).json();
+         if(setDat.error) throw new Error(setDat.error);
+         const clist = setDat.cards || [];
+         cards=clist.map(c=>({id:c.id,name:c.name,image:c.image?c.image+'/high.png':null,set:setDat.name||'',rarity:c.rarity||''}));
+      } else {
+         const list=await(await fetch(API+'/api/catalog/pokemon/search?q='+encodeURIComponent(q))).json();
+         if(list.error) throw new Error(list.error);
+         cards=(Array.isArray(list)?list:[]).slice(0,50).map(c=>({id:c.id,name:c.name,image:c.image?c.image+'/high.png':null,set:c.set?.name||'',rarity:c.rarity||''}));
+      }
+    }
     else if(TCG==='yugioh'){cards=await(await fetch(API+'/api/catalog/yugioh/search?q='+encodeURIComponent(q))).json();}
     else if(TCG==='magic'){cards=await(await fetch(API+'/api/catalog/magic/search?q='+encodeURIComponent(q))).json();}
     $('catGrid').innerHTML=cards.length?cards.map(c=>`<div class="bg-surface-container-high border border-outline-variant/10 hover:border-primary/50 cursor-pointer flex flex-col"><div class="aspect-[3/4] bg-surface-container-lowest overflow-hidden">${c.image?`<img src="${API}/api/image-proxy?url=${encodeURIComponent(c.image)}" class="w-full h-full object-cover" onerror="this.style.display='none'">`:'<div class="w-full h-full flex items-center justify-center text-4xl">🎴</div>'}</div><div class="p-3"><h4 class="font-bold text-xs truncate">${c.name}</h4><p class="text-[10px] text-on-surface-variant truncate">${c.set||c.rarity||''}</p></div></div>`).join(''):'<div class="col-span-full py-12 text-center text-on-surface-variant text-sm">Sonuç bulunamadı.</div>';
@@ -1221,11 +1260,36 @@ async function openTrackerDetail(id){
        span.className = `text-xs font-bold ${spread > 0 ? 'text-secondary' : 'text-error'}`;
     }
 
-    // Image
-    if(competitors[0] && competitors[0].image) {
-       $('detImg').src = competitors[0].image;
+    // Images
+    const imgs = new Set();
+    if (competitors[0] && competitors[0].image) imgs.add(competitors[0].image);
+    competitors.forEach(c => { if(c.image) imgs.add(c.image); });
+    const imgArr = Array.from(imgs);
+    
+    if(imgArr.length > 0) {
+       $('detImg').src = imgArr[0];
+       // Build Gallery
+       $('detImgGallery').innerHTML = imgArr.map(src => `<div class="shrink-0 w-16 h-16 bg-surface-container border border-outline-variant/20 hover:border-primary-container p-1 cursor-pointer transition-colors" onclick="document.getElementById('detImg').src='${src}'"><img src="${src}" class="w-full h-full object-contain mix-blend-lighten"></div>`).join('');
     } else {
-       $('detImg').src = "https://lh3.googleusercontent.com/aida-public/AB6AXuDI12gOVw9kEKeSzHuMBdTVa8cT2ALvTCL2DDBuENWaDuCMmNPd72j5ReEPIknpfY6JKE-UXRZreqyX1O7cR1y4WkK9QjO77Av0l-iQQepPrMky7nhY9kl4dnSAzoaDSQmcUPloY23Veol8xTgtWO6mVUlMPUDVZxYFXBAerb33JuIDAJ_b4qIpAYLb30NYMIa-Uupz7Qhefa7KyK9o-7Bm-e-zKCVAZh_WRw2T6-xxoIPR-1qkYp-EPzzcl4maXlh75fFCqx0bwts"; // fallback mock watch
+       $('detImg').src = "https://lh3.googleusercontent.com/aida-public/AB6AXuDI12gOVw9kEKeSzHuMBdTVa8cT2ALvTCL2DDBuENWaDuCMmNPd72j5ReEPIknpfY6JKE-UXRZreqyX1O7cR1y4WkK9QjO77Av0l-iQQepPrMky7nhY9kl4dnSAzoaDSQmcUPloY23Veol8xTgtWO6mVUlMPUDVZxYFXBAerb33JuIDAJ_b4qIpAYLb30NYMIa-Uupz7Qhefa7KyK9o-7Bm-e-zKCVAZh_WRw2T6-xxoIPR-1qkYp-EPzzcl4maXlh75fFCqx0bwts"; // fallback
+       $('detImgGallery').innerHTML = '';
+    }
+
+    // Dynamic SKU / GB / Custom Tags Evaluator
+    const tags = new Set();
+    const gbPattern = /\\b(\\d+)\\s?(gb|tb|mb)\\b/gi;
+    const colorPattern = /\\b(Siyah|Beyaz|Mavi|Kırmızı|Yeşil|Sarı|Mor|Pembe|Grafit|Titanyum|Black|White|Blue|Red|Green)\\b/gi;
+    competitors.forEach(c => {
+       const mGB = c.name.match(gbPattern);
+       if(mGB) mGB.forEach(m => tags.add(m.toUpperCase().replace(/\\s/g,''))); // '128 GB' -> '128GB'
+       const mCol = c.name.match(colorPattern);
+       if(mCol) mCol.forEach(m => tags.add(titleCaseTR(m)));
+    });
+    
+    if(tags.size > 0) {
+       $('detTags').innerHTML = Array.from(tags).map(t => `<span class="bg-primary/10 border border-primary/20 text-primary-container px-2 py-1 text-[10px] font-bold uppercase tracking-widest">${t}</span>`).join('');
+    } else {
+       $('detTags').innerHTML = '';
     }
 
     $('detLastSync').textContent = lastScan ? new Date(lastScan).toLocaleTimeString('tr-TR') : 'Never';
