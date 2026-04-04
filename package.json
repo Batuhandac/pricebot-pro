@@ -1,0 +1,17 @@
+{
+  "name": "pricebot-pro-rebuild",
+  "version": "2026.4.0",
+  "private": true,
+  "description": "PriceBot Pro SaaS rebuild based on technical specification",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "check": "node --check server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^4.22.1",
+    "node-fetch": "^2.7.0"
+  }
+}

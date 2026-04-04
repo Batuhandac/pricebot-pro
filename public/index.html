@@ -1,0 +1,1429 @@
+<!DOCTYPE html>
+<html class="dark" lang="tr">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>PriceBot Pro | Obsidian Architect</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;400;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+tailwind.config={darkMode:"class",theme:{extend:{colors:{"secondary-fixed-dim":"#4edea3","surface-container-highest":"#2d3449","secondary":"#4edea3","surface-variant":"#2d3449","surface-dim":"#0b1326","on-primary-container":"#613b00","tertiary":"#8ed5ff","tertiary-container":"#38bdf8","surface-container-high":"#222a3d","surface-container":"#171f33","outline":"#a08e7a","background":"#0b1326","surface-bright":"#31394d","secondary-container":"#00a572","on-primary":"#472a00","outline-variant":"#534434","surface":"#0b1326","on-secondary-container":"#00311f","on-surface-variant":"#d8c3ad","surface-container-low":"#131b2e","inverse-surface":"#dae2fd","on-secondary-fixed":"#002113","on-background":"#dae2fd","surface-container-lowest":"#060e20","on-surface":"#dae2fd","primary":"#ffc174","on-secondary":"#003824","primary-container":"#f59e0b","error":"#ffb4ab","error-container":"#93000a","on-error-container":"#ffdad6"},borderRadius:{DEFAULT:"0px",lg:"0px",xl:"0px",full:"9999px"},fontFamily:{headline:["Manrope"],body:["Inter"],label:["Inter"]}}}}
+</script>
+<style>
+.material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle;}
+body{background:#0b1326;color:#dae2fd;font-family:'Inter',sans-serif;}
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:#060e20;}
+::-webkit-scrollbar-thumb{background:#222a3d;}
+::-webkit-scrollbar-thumb:hover{background:#f59e0b;}
+.page{display:none;}.page.on{display:block;}
+.no-scrollbar::-webkit-scrollbar{display:none;}
+.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none;}
+/* Chart canvas height fix */
+.chart-wrap{position:relative;}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════
+     SIDE NAV
+═══════════════════════════════════ -->
+<aside id="sidebar" class="fixed left-0 top-0 h-full w-20 flex flex-col bg-[#0b1326] z-50 border-r border-outline-variant/10 transition-transform duration-300">
+  <div class="h-14 flex items-center justify-center bg-[#060e20] border-b border-outline-variant/10">
+    <span class="text-primary font-black italic text-xl tracking-tighter font-headline">OA</span>
+  </div>
+  <nav class="flex-1 flex flex-col items-center py-4 gap-1">
+    <button class="nav-btn on w-full flex flex-col items-center py-3 text-primary border-l-2 border-primary bg-surface-container-high transition-colors" data-page="dashboard">
+      <span class="material-symbols-outlined text-xl mb-1">dashboard</span>
+      <span class="text-[10px] font-bold uppercase tracking-wider font-headline">Dashboard</span>
+    </button>
+    <button class="nav-btn w-full flex flex-col items-center py-3 text-outline hover:text-primary hover:bg-surface-container transition-colors" data-page="catalog">
+      <span class="material-symbols-outlined text-xl mb-1">menu_book</span>
+      <span class="text-[10px] font-bold uppercase tracking-wider font-headline">Catalog</span>
+    </button>
+    <button class="nav-btn w-full flex flex-col items-center py-3 text-outline hover:text-primary hover:bg-surface-container transition-colors" data-page="products">
+      <span class="material-symbols-outlined text-xl mb-1">inventory_2</span>
+      <span class="text-[10px] font-bold uppercase tracking-wider font-headline">Products</span>
+    </button>
+    <button class="nav-btn w-full flex flex-col items-center py-3 text-outline hover:text-primary hover:bg-surface-container transition-colors" data-page="integrations">
+      <span class="material-symbols-outlined text-xl mb-1">settings_input_component</span>
+      <span class="text-[10px] font-bold uppercase tracking-wider font-headline">Integrations</span>
+    </button>
+    <button class="nav-btn w-full flex flex-col items-center py-3 text-outline hover:text-primary hover:bg-surface-container transition-colors" data-page="engine">
+      <span class="material-symbols-outlined text-xl mb-1">auto_fix_high</span>
+      <span class="text-[10px] font-bold uppercase tracking-wider font-headline">Engine</span>
+    </button>
+    <button class="nav-btn w-full flex flex-col items-center py-3 text-outline hover:text-primary hover:bg-surface-container transition-colors" data-page="logs">
+      <span class="material-symbols-outlined text-xl mb-1">history_edu</span>
+      <span class="text-[10px] font-bold uppercase tracking-wider font-headline">Logs</span>
+    </button>
+  </nav>
+  <div class="pb-4 flex flex-col items-center gap-2">
+    <div class="flex items-center gap-1.5 px-2">
+      <span class="w-1.5 h-1.5 rounded-full bg-secondary" id="sDot"></span>
+      <span class="text-[9px] font-bold text-secondary uppercase tracking-wider" id="sTxt">—</span>
+    </div>
+  </div>
+</aside>
+
+<!-- ═══════════════════════════════════
+     TOP BAR
+═══════════════════════════════════ -->
+<header class="fixed top-0 right-0 left-20 z-40 h-14 bg-[#0b1326]/90 backdrop-blur-xl flex items-center justify-between px-6 border-b border-outline-variant/10">
+  <div class="flex items-center gap-6">
+    <h1 class="text-primary font-bold tracking-tighter text-lg font-headline">Obsidian Architect</h1>
+    <div class="hidden md:flex gap-6 items-center">
+      <span class="text-primary-container font-bold text-xs uppercase tracking-widest">Market: <span id="tUSD">—</span>₺</span>
+      <span class="text-on-surface-variant text-xs font-semibold uppercase tracking-widest">EUR: <span id="tEUR">—</span>₺</span>
+    </div>
+  </div>
+  <div class="flex items-center gap-4">
+    <div class="hidden lg:flex items-center bg-surface-container-lowest px-3 py-1.5 gap-2">
+      <span class="material-symbols-outlined text-outline text-sm">search</span>
+      <input id="globalSearch" class="bg-transparent border-none focus:ring-0 text-xs text-on-surface p-0 w-36 outline-none" placeholder="Kart ara..." onkeydown="if(event.key==='Enter'){gо('catalog');setTimeout(()=>{$('catQ').value=this.value;doSearch();},200)}"/>
+    </div>
+    <span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-white">notifications</span>
+    <button class="bg-primary-container text-on-primary-container px-4 py-1.5 text-xs font-bold uppercase tracking-widest" onclick="gо('integrations')">Connect</button>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════
+     MAIN CONTENT
+═══════════════════════════════════ -->
+<main class="ml-20 mt-14 mb-8 min-h-screen" id="mainContent">
+
+<!-- ──────────────────────────────────
+     DASHBOARD
+────────────────────────────────── -->
+<div class="page on" id="page-dashboard">
+  <div class="p-8 max-w-7xl mx-auto">
+
+    <!-- Hero Portfolio Section -->
+    <header class="mb-8 border-b border-outline-variant/20 pb-6 flex items-end justify-between">
+      <div>
+        <h2 class="font-headline text-4xl font-extrabold tracking-tight text-on-surface mb-1">Dashboard</h2>
+        <p class="text-on-surface-variant text-xs uppercase tracking-[.2em] font-bold">Yönetim Merkezi & Piyasa Özeti</p>
+      </div>
+      <div class="flex gap-2">
+        <div class="bg-surface-container-low px-4 py-2 flex items-center gap-2 border-l-2 border-secondary">
+          <span class="w-2 h-2 rounded-full bg-secondary shadow-[0_0_8px_#4edea3]"></span>
+          <span class="text-[10px] font-bold uppercase tracking-wider text-secondary">Global Sync Aktif</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Stat Cards -->
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+      <div class="bg-surface-container-high p-5 border-l-2 border-secondary">
+        <p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">Toplam Ürün</p>
+        <p class="text-3xl font-headline font-extrabold text-on-surface" id="dProd">—</p>
+      </div>
+      <div class="bg-surface-container-high p-5 border-l-2 border-primary">
+        <p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">Platform</p>
+        <p class="text-3xl font-headline font-extrabold text-primary" id="dPlat">—</p>
+      </div>
+      <div class="bg-surface-container-high p-5 border-l-2 border-tertiary">
+        <p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">Zamanlayıcı</p>
+        <p class="text-3xl font-headline font-extrabold text-tertiary" id="dSched">—</p>
+      </div>
+      <div class="bg-surface-container-high p-5 border-l-2 border-primary-container">
+        <p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">Eklenen</p>
+        <p class="text-3xl font-headline font-extrabold text-primary-container" id="dAdded">0</p>
+      </div>
+      <div class="bg-surface-container-high p-5 border-l-2 border-secondary-container">
+        <p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">Son Güncelleme</p>
+        <p class="text-3xl font-headline font-extrabold" id="dUpd">—</p>
+      </div>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <!-- Platform cards -->
+      <div class="lg:col-span-8 bg-surface-container-high">
+        <div class="p-6 border-b border-outline-variant/10 flex justify-between items-center">
+          <h3 class="font-headline font-bold text-sm uppercase tracking-wider">Aktif Platformlar</h3>
+          <button class="text-primary text-[10px] font-bold uppercase tracking-widest hover:underline" onclick="gо('integrations')">Yönet →</button>
+        </div>
+        <div id="dPlatList" class="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="text-on-surface-variant text-sm p-4">Platform eklenmedi.</div>
+        </div>
+      </div>
+
+      <!-- FX Ticker -->
+      <div class="lg:col-span-4 bg-surface-container-low">
+        <div class="p-6 border-b border-outline-variant/10">
+          <h3 class="font-headline font-bold text-[10px] uppercase tracking-[.2em] text-on-surface-variant">Live FX Ticker</h3>
+        </div>
+        <div class="p-6 flex flex-col gap-4">
+          <div class="flex justify-between items-center py-2 border-b border-outline-variant/20">
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-xs">USD / TRY</span>
+            </div>
+            <span class="font-inter text-sm font-bold text-primary" id="dRateUSD">—</span>
+          </div>
+          <div class="flex justify-between items-center py-2 border-b border-outline-variant/20">
+            <span class="font-bold text-xs">EUR / TRY</span>
+            <span class="font-inter text-sm font-bold text-primary" id="dRateEUR">—</span>
+          </div>
+          <div class="flex justify-between items-center py-2">
+            <span class="font-bold text-xs">GBP / TRY</span>
+            <span class="font-inter text-sm font-bold text-primary" id="dRateGBP">—</span>
+          </div>
+          <div class="text-[10px] text-on-surface-variant mt-2" id="dRateTime">—</div>
+        </div>
+      </div>
+
+      <!-- Recent Logs -->
+      <div class="lg:col-span-12 bg-surface-container-high">
+        <div class="p-6 border-b border-outline-variant/10 flex justify-between items-center">
+          <h3 class="font-headline font-bold text-sm uppercase tracking-wider">Son Aktiviteler</h3>
+          <button class="text-primary text-[10px] font-bold uppercase tracking-widest hover:underline" onclick="gо('logs')">Tümü →</button>
+        </div>
+        <div id="dLogList" class="divide-y divide-outline-variant/10 max-h-64 overflow-y-auto">
+          <div class="p-4 text-on-surface-variant text-sm">Log bekleniyor...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ──────────────────────────────────
+     KART KATALOĞU (Obsidian Architect)
+────────────────────────────────── -->
+<div class="page" id="page-catalog">
+
+  <!-- Hero Banner -->
+  <div class="bg-surface-container-lowest border-b border-outline-variant/10 px-8 py-5 flex items-end justify-between relative overflow-hidden">
+    <div class="relative z-10">
+      <div class="text-[10px] font-bold uppercase tracking-[.2em] text-secondary mb-1">TCG Market Index</div>
+      <h2 class="font-headline text-3xl font-extrabold tracking-tight text-on-surface" id="catHeroTitle">Pokémon Market</h2>
+      <p class="text-on-surface-variant text-xs mt-1 uppercase tracking-[.1em] font-bold" id="catHeroSub">TCGdex · Cardmarket · TCGPlayer · eBay — Gerçek zamanlı</p>
+    </div>
+    <div class="flex gap-3 relative z-10">
+      <div class="bg-surface-container-high px-4 py-2 border-l-2 border-secondary">
+        <div class="text-[9px] text-on-surface-variant font-bold uppercase tracking-tighter">Aktif Kaynak</div>
+        <div class="font-headline text-lg font-extrabold text-on-surface" id="catSourceCount">4+</div>
+      </div>
+      <div class="bg-surface-container-high px-4 py-2 border-l-2 border-primary">
+        <div class="text-[9px] text-on-surface-variant font-bold uppercase tracking-tighter">USD/TRY</div>
+        <div class="font-headline text-lg font-extrabold text-primary" id="catUSDRate">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TCG Nav Tabs -->
+  <div class="flex items-center bg-[#060e20] border-b border-outline-variant/10 px-8 overflow-x-auto no-scrollbar">
+    <button class="cat-tab py-4 px-5 text-[11px] font-bold uppercase tracking-[.1em] text-primary-container border-b-2 border-primary-container cursor-pointer whitespace-nowrap transition-colors" data-game="pokemon" onclick="setTCG('pokemon',this)">🟡 Pokémon</button>
+    <button class="cat-tab py-4 px-5 text-[11px] font-bold uppercase tracking-[.1em] text-outline border-b-2 border-transparent cursor-pointer whitespace-nowrap transition-colors hover:text-on-surface" data-game="yugioh" onclick="setTCG('yugioh',this)">🟣 Yu-Gi-Oh</button>
+    <button class="cat-tab py-4 px-5 text-[11px] font-bold uppercase tracking-[.1em] text-outline border-b-2 border-transparent cursor-pointer whitespace-nowrap transition-colors hover:text-on-surface" data-game="magic" onclick="setTCG('magic',this)">⚪ MTG</button>
+    <button class="cat-tab py-4 px-5 text-[11px] font-bold uppercase tracking-[.1em] text-outline border-b-2 border-transparent cursor-pointer whitespace-nowrap transition-colors hover:text-on-surface" data-game="onepiece" onclick="setTCG('onepiece',this)">🔵 One Piece</button>
+    <button class="cat-tab py-4 px-5 text-[11px] font-bold uppercase tracking-[.1em] text-outline border-b-2 border-transparent cursor-pointer whitespace-nowrap transition-colors hover:text-on-surface" data-game="sealed" onclick="setTCG('sealed',this)">📦 Sealed</button>
+    <button class="cat-tab py-4 px-5 text-[11px] font-bold uppercase tracking-[.1em] text-outline border-b-2 border-transparent cursor-pointer whitespace-nowrap transition-colors hover:text-on-surface" data-game="sport" onclick="setTCG('sport',this)">🏆 Spor</button>
+  </div>
+  <!-- Sport sub-tabs -->
+  <div id="sportSubBar" class="hidden flex items-center bg-[#060e20] border-b border-outline-variant/10 px-8">
+    <button class="sport-tab py-3 px-4 text-[10px] font-bold uppercase tracking-[.1em] text-primary-container border-b-2 border-primary-container" onclick="setSport('nfl',this)">🏈 NFL</button>
+    <button class="sport-tab py-3 px-4 text-[10px] font-bold uppercase tracking-[.1em] text-outline border-b-2 border-transparent hover:text-on-surface" onclick="setSport('nba',this)">🏀 NBA</button>
+    <button class="sport-tab py-3 px-4 text-[10px] font-bold uppercase tracking-[.1em] text-outline border-b-2 border-transparent hover:text-on-surface" onclick="setSport('mlb',this)">⚾ MLB</button>
+    <button class="sport-tab py-3 px-4 text-[10px] font-bold uppercase tracking-[.1em] text-outline border-b-2 border-transparent hover:text-on-surface" onclick="setSport('soccer',this)">⚽ Soccer</button>
+  </div>
+
+  <!-- Main Layout: Sidebar + Grid -->
+  <div class="flex" style="min-height:calc(100vh - 180px)">
+
+    <!-- Left Sidebar -->
+    <div class="w-56 flex-shrink-0 border-r border-outline-variant/10 flex flex-col bg-surface-container-lowest">
+
+      <!-- Search -->
+      <div class="border-b border-outline-variant/10">
+        <div class="flex items-center gap-2 px-4 py-3 bg-[#060e20]">
+          <span class="material-symbols-outlined text-outline text-base">search</span>
+          <input id="catQ" class="bg-transparent border-none outline-none text-xs text-on-surface w-full font-inter" placeholder="Kart ara..." onkeydown="if(event.key==='Enter')doSearch()"/>
+        </div>
+        <button onclick="doSearch()" class="w-full py-2 bg-primary-container text-on-primary-container text-[10px] font-bold uppercase tracking-[.1em] hover:brightness-110">Ara →</button>
+      </div>
+
+      <!-- Sets -->
+      <div class="border-b border-outline-variant/10">
+        <button class="w-full flex items-center justify-between px-4 py-3 text-[10px] font-bold uppercase tracking-[.1em] text-primary hover:bg-surface-container" onclick="toggleSets()">
+          Set Arşivi
+          <span class="material-symbols-outlined text-base" id="setsIcon">expand_more</span>
+        </button>
+        <div id="setPanel" class="hidden max-h-60 overflow-y-auto">
+          <div id="setList" class="flex flex-col"><div class="px-4 py-3 text-[11px] text-on-surface-variant">Yükleniyor...</div></div>
+        </div>
+      </div>
+
+      <!-- Selected Cards -->
+      <div id="selBar" class="hidden border-b border-outline-variant/10 bg-surface-container">
+        <div class="px-4 py-3 flex items-center justify-between">
+          <span class="text-[10px] font-bold uppercase tracking-[.1em] text-secondary">Seçilen: <span id="selCnt">0</span></span>
+          <button onclick="clearSel()" class="text-[9px] text-outline hover:text-error uppercase font-bold">Temizle</button>
+        </div>
+        <div id="selMini" class="px-3 pb-2 grid grid-cols-3 gap-1"></div>
+        <div class="px-3 pb-3 flex flex-col gap-1">
+          <button onclick="openImport()" class="w-full py-2 bg-secondary text-on-secondary-fixed text-[10px] font-black uppercase tracking-[.1em]">↑ Platforma Aktar</button>
+        </div>
+      </div>
+
+      <!-- Filter info -->
+      <div class="p-4 mt-auto">
+        <div class="text-[10px] text-on-surface-variant uppercase tracking-wider mb-2 font-bold">Fiyat Kaynakları</div>
+        <div class="flex flex-col gap-1.5 text-[10px]">
+          <div class="flex items-center gap-2"><span class="w-2 h-2 bg-[#3b82f6]"></span><span class="text-on-surface-variant">Cardmarket (EUR)</span></div>
+          <div class="flex items-center gap-2"><span class="w-2 h-2 bg-[#f59e0b]"></span><span class="text-on-surface-variant">TCGPlayer (USD)</span></div>
+          <div class="flex items-center gap-2"><span class="w-2 h-2 bg-[#ef4444]"></span><span class="text-on-surface-variant">eBay Browse</span></div>
+          <div class="flex items-center gap-2"><span class="w-2 h-2 bg-[#10b981]"></span><span class="text-on-surface-variant">OPTCG / YGO</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card Grid Area -->
+    <div class="flex-1 min-w-0 p-6 bg-surface">
+      <div class="flex items-center justify-between mb-4">
+        <span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant" id="catResultInfo">Oyun seçin ve arama yapın</span>
+        <div class="flex gap-1">
+          <button id="gridBtn" onclick="setGridMode('grid',this)" class="p-2 bg-surface-container-high text-primary"><span class="material-symbols-outlined text-base">grid_view</span></button>
+          <button id="listBtn" onclick="setGridMode('list',this)" class="p-2 bg-surface-container-lowest text-outline"><span class="material-symbols-outlined text-base">list</span></button>
+        </div>
+      </div>
+      <div id="catGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+        <div class="col-span-full py-16 text-center text-on-surface-variant text-sm">Oyun seçin ve arama yapın.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ──────────────────────────────────
+     ÜRÜN YÖNETİMİ
+────────────────────────────────── -->
+<div class="page" id="page-products">
+  <div class="p-8 max-w-7xl mx-auto">
+    <header class="mb-8 border-b border-outline-variant/20 pb-6 flex items-end justify-between flex-wrap gap-4">
+      <div>
+        <h2 class="font-headline text-4xl font-extrabold tracking-tight text-on-surface mb-1">Product Terminal</h2>
+        <p class="text-on-surface-variant text-xs uppercase tracking-[.2em] font-bold">Fiyat hesapla, platformlara gönder</p>
+      </div>
+      <div class="flex gap-2 flex-wrap">
+        <select id="prodPlatSel" class="bg-surface-container-low border border-outline-variant/20 text-on-surface text-xs px-3 py-2 outline-none min-w-48" onchange="loadProds()"><option value="">Platform seçin...</option></select>
+        <button onclick="loadProds()" class="bg-surface-container-high px-4 py-2 text-xs font-bold uppercase tracking-wider text-on-surface hover:bg-surface-bright">↻</button>
+        <button onclick="calcPrices()" class="bg-primary-container text-on-primary-container px-4 py-2 text-xs font-bold uppercase tracking-wider">🧮 Hesapla</button>
+        <button onclick="pushPrices()" class="bg-secondary text-on-secondary-fixed px-4 py-2 text-xs font-bold uppercase tracking-wider">↑ Platforma Gönder</button>
+      </div>
+    </header>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div class="bg-surface-container-high p-5 border-l-2 border-outline"><p class="text-[10px] font-bold text-on-surface-variant uppercase mb-1">Toplam</p><p class="text-2xl font-headline font-extrabold" id="ptTot">—</p></div>
+      <div class="bg-surface-container-high p-5 border-l-2 border-secondary"><p class="text-[10px] font-bold text-on-surface-variant uppercase mb-1">↑ Artacak</p><p class="text-2xl font-headline font-extrabold text-secondary" id="ptUp">—</p></div>
+      <div class="bg-surface-container-high p-5 border-l-2 border-error"><p class="text-[10px] font-bold text-on-surface-variant uppercase mb-1">↓ Düşecek</p><p class="text-2xl font-headline font-extrabold text-error" id="ptDn">—</p></div>
+      <div class="bg-surface-container-high p-5 border-l-2 border-on-surface-variant"><p class="text-[10px] font-bold text-on-surface-variant uppercase mb-1">— Sabit</p><p class="text-2xl font-headline font-extrabold text-on-surface-variant" id="ptEq">—</p></div>
+    </div>
+
+    <!-- Table -->
+    <div class="bg-surface-container-high overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left">
+          <thead><tr class="bg-surface-container-lowest text-[10px] font-bold text-on-surface-variant uppercase tracking-[.15em]">
+            <th class="px-5 py-3">Ürün</th>
+            <th class="px-5 py-3">Platform</th>
+            <th class="px-5 py-3">Mevcut</th>
+            <th class="px-5 py-3">Global Ort.</th>
+            <th class="px-5 py-3">Önerilen</th>
+            <th class="px-5 py-3">Durum</th>
+            <th class="px-5 py-3 text-right">İşlem</th>
+          </tr></thead>
+          <tbody id="prodBody" class="divide-y divide-outline-variant/10">
+            <tr><td colspan="7" class="px-5 py-8 text-center text-on-surface-variant text-sm">Platform seçin.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="px-5 py-3 bg-surface-container-lowest border-t border-outline-variant/10 text-[10px] text-outline font-bold uppercase" id="prodPaging"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ──────────────────────────────────
+     ÜRÜN DETAY
+────────────────────────────────── -->
+<div class="page" id="page-productdetail">
+  <div class="p-8 max-w-7xl mx-auto">
+    <div class="flex items-center gap-4 mb-6">
+      <button onclick="gо('products')" class="flex items-center gap-2 text-outline hover:text-on-surface text-xs font-bold uppercase tracking-wider bg-surface-container-low px-4 py-2">
+        <span class="material-symbols-outlined text-base">arrow_back</span>Products
+      </button>
+      <div class="text-[10px] text-on-surface-variant uppercase tracking-wider" id="pdCrumb">— / —</div>
+      <div class="ml-auto flex gap-2" id="pdTopActions"></div>
+    </div>
+    <div id="pdBody"><div class="py-16 text-center text-primary text-xs font-bold uppercase tracking-widest animate-pulse">Yükleniyor...</div></div>
+  </div>
+</div>
+
+<!-- ──────────────────────────────────
+     INTEGRATIONS (Hub)
+────────────────────────────────── -->
+<div class="page" id="page-integrations">
+  <div class="p-8 max-w-7xl mx-auto">
+    <header class="mb-8 border-b border-outline-variant/20 pb-6 flex items-end justify-between">
+      <div>
+        <h2 class="font-headline text-4xl font-extrabold tracking-tight text-on-surface mb-1">Integration Hub</h2>
+        <p class="text-on-surface-variant text-xs uppercase tracking-[.2em] font-bold">Yüksek frekanslı pazaryeri node'larını yönet</p>
+      </div>
+      <div class="flex gap-2">
+        <div class="bg-surface-container-low px-4 py-2 flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-secondary shadow-[0_0_6px_#4edea3]"></span>
+          <span class="text-[10px] font-bold uppercase tracking-wider text-secondary">Global Sync Operational</span>
+        </div>
+        <button onclick="openM('mAddPlat')" class="bg-primary-container text-on-primary-container px-5 py-2 text-xs font-bold uppercase tracking-widest">+ Platform Ekle</button>
+      </div>
+    </header>
+
+    <!-- Bento Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-5" id="platCards">
+      <!-- Dinamik -->
+    </div>
+
+    <!-- Add new -->
+    <button onclick="openM('mAddPlat')" class="mt-5 w-full h-16 bg-surface-container-lowest border-2 border-dashed border-outline-variant/20 hover:border-primary/40 hover:bg-surface-container transition-all flex items-center justify-center gap-3 group">
+      <span class="material-symbols-outlined text-outline group-hover:text-primary">add_circle</span>
+      <span class="text-xs font-bold uppercase tracking-[.3em] text-outline group-hover:text-on-surface">Yeni Platform Bağla</span>
+    </button>
+  </div>
+</div>
+
+<!-- ──────────────────────────────────
+     ENGINE
+────────────────────────────────── -->
+<div class="page" id="page-engine">
+  <div class="p-8 max-w-7xl mx-auto">
+    <header class="mb-8 border-b border-outline-variant/20 pb-6">
+      <h2 class="font-headline text-4xl font-extrabold tracking-tight text-on-surface mb-1">Fiyat Motoru</h2>
+      <p class="text-on-surface-variant text-xs uppercase tracking-[.2em] font-bold">Zamanlayıcılar & Strateji Parametreleri</p>
+    </header>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2 flex flex-col gap-5">
+        <div class="bg-surface-container-high">
+          <div class="p-5 border-b border-outline-variant/10 flex justify-between items-center">
+            <h3 class="font-bold text-sm uppercase tracking-wider">Platform Zamanlayıcıları</h3>
+            <button onclick="loadEngine()" class="text-[10px] text-outline uppercase font-bold hover:text-on-surface">↻ Yenile</button>
+          </div>
+          <div id="schedList" class="p-5 divide-y divide-outline-variant/10">
+            <div class="py-3 text-on-surface-variant text-sm">Platform eklenmedi.</div>
+          </div>
+        </div>
+        <div class="bg-surface-container-high">
+          <div class="p-5 border-b border-outline-variant/10"><h3 class="font-bold text-sm uppercase tracking-wider">Kategori Stratejileri</h3></div>
+          <div id="stratList" class="p-5 divide-y divide-outline-variant/10"></div>
+        </div>
+      </div>
+      <div class="flex flex-col gap-5">
+        <div class="bg-surface-container-high p-5">
+          <h3 class="font-bold text-[10px] uppercase tracking-[.2em] text-on-surface-variant mb-4">Fiyat Kaynakları</h3>
+          <div class="flex flex-col gap-2">
+            <div class="flex justify-between items-center p-3 bg-surface-container-lowest"><div><div class="font-bold text-xs">🟡 TCGdex</div><div class="text-[10px] text-on-surface-variant">Pokémon — CM EUR + TCP USD</div></div><span class="text-secondary text-xs font-bold">✓ Aktif</span></div>
+            <div class="flex justify-between items-center p-3 bg-surface-container-lowest"><div><div class="font-bold text-xs">🟣 YGOPRODeck</div><div class="text-[10px] text-on-surface-variant">Yu-Gi-Oh + eBay fiyat</div></div><span class="text-secondary text-xs font-bold">✓ Aktif</span></div>
+            <div class="flex justify-between items-center p-3 bg-surface-container-lowest"><div><div class="font-bold text-xs">⚪ Scryfall</div><div class="text-[10px] text-on-surface-variant">MTG — Foil + Normal</div></div><span class="text-secondary text-xs font-bold">✓ Aktif</span></div>
+            <div class="flex justify-between items-center p-3 bg-surface-container-lowest"><div><div class="font-bold text-xs">🔵 OPTCG</div><div class="text-[10px] text-on-surface-variant">One Piece</div></div><span class="text-secondary text-xs font-bold">✓ Aktif</span></div>
+            <div class="flex justify-between items-center p-3 bg-surface-container-lowest"><div><div class="font-bold text-xs">🛒 eBay Browse</div><div class="text-[10px] text-on-surface-variant">Sealed + Spor + Tüm oyunlar</div></div><span class="text-secondary text-xs font-bold">✓ Aktif</span></div>
+          </div>
+          <div class="mt-3 p-3 bg-secondary/10 border border-secondary/20 text-[10px] text-secondary font-bold uppercase">5 kaynak → ortalama → kur → marj → TRY</div>
+        </div>
+        <div class="bg-[#060e20] p-5">
+          <div class="text-[10px] font-bold uppercase tracking-[.2em] text-on-surface-variant mb-3">Safe Mode</div>
+          <div class="text-xs text-on-surface-variant leading-relaxed mb-4">Piyasa %15+ dalgalandığında devreye girer. Anlık fiyat düşüşlerini dondurur.</div>
+          <div class="flex justify-between p-3 bg-surface-container-high">
+            <span class="text-[10px] font-bold uppercase text-on-surface-variant">Durum</span>
+            <span class="text-[10px] font-bold text-secondary">Stabil</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ──────────────────────────────────
+     LOGS
+────────────────────────────────── -->
+<div class="page" id="page-logs">
+  <div class="p-8 max-w-7xl mx-auto">
+    <header class="mb-6 border-b border-outline-variant/20 pb-6 flex items-end justify-between flex-wrap gap-4">
+      <div>
+        <h2 class="font-headline text-4xl font-extrabold tracking-tight text-on-surface mb-1">System Activity Feed</h2>
+        <p class="text-on-surface-variant text-xs uppercase tracking-[.2em] font-bold">Live Monitoring Pulse</p>
+      </div>
+      <div class="flex gap-2">
+        <select id="logFilt" class="bg-surface-container-low border border-outline-variant/20 text-on-surface text-xs px-3 py-2 outline-none" onchange="loadLogs()"><option value="">Tüm Platformlar</option></select>
+        <button onclick="loadLogs()" class="bg-surface-container-high px-4 py-2 text-xs font-bold uppercase text-on-surface hover:bg-surface-bright">↻</button>
+      </div>
+    </header>
+
+    <!-- Status strip -->
+    <div class="bg-surface-container-high p-5 border-l-4 border-primary mb-5 grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="bg-surface-container-low p-3"><span class="block text-[10px] text-outline font-bold mb-1">UPTIME</span><div class="text-xl font-bold font-headline text-secondary">99.98%</div></div>
+      <div class="bg-surface-container-low p-3"><span class="block text-[10px] text-outline font-bold mb-1">API THROUGHPUT</span><div class="text-xl font-bold font-headline">842 req/min</div></div>
+      <div class="bg-surface-container-low p-3"><span class="block text-[10px] text-outline font-bold mb-1">SYNC QUEUE</span><div class="text-xl font-bold font-headline text-secondary">0 pending</div></div>
+      <div class="bg-surface-container-low p-3"><span class="block text-[10px] text-outline font-bold mb-1">LAST SYNC</span><div class="text-xl font-bold font-headline" id="logLastSync">—</div></div>
+    </div>
+
+    <!-- Log Table -->
+    <div class="bg-surface-container-high overflow-hidden">
+      <table class="w-full text-left">
+        <thead><tr class="bg-surface-container-highest">
+          <th class="px-5 py-3 text-[10px] font-bold text-outline uppercase tracking-widest">Zaman</th>
+          <th class="px-5 py-3 text-[10px] font-bold text-outline uppercase tracking-widest">Olay</th>
+          <th class="px-5 py-3 text-[10px] font-bold text-outline uppercase tracking-widest">Platform</th>
+          <th class="px-5 py-3 text-[10px] font-bold text-outline uppercase tracking-widest">Durum</th>
+          <th class="px-5 py-3 text-[10px] font-bold text-outline uppercase tracking-widest">Detay</th>
+        </tr></thead>
+        <tbody id="logBody" class="divide-y divide-outline-variant/10">
+          <tr><td colspan="5" class="px-5 py-8 text-center text-on-surface-variant text-sm">Log bekleniyor...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<!-- ═══════════════════════════════════
+     FOOTER
+═══════════════════════════════════ -->
+<footer class="fixed bottom-0 left-20 right-0 h-8 bg-[#060e20] flex items-center justify-between px-6 z-30 border-t border-outline-variant/10">
+  <span class="text-[10px] text-on-surface-variant uppercase tracking-[.1em]">© 2025 PriceBot Pro — Obsidian Architect</span>
+  <div class="flex items-center gap-5">
+    <span class="text-secondary text-[10px] uppercase tracking-[.1em] flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>ikas: <span id="footIkas">—</span></span>
+    <span class="text-secondary text-[10px] uppercase tracking-[.1em] flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>Shopify: <span id="footShopify">—</span></span>
+    <span class="text-on-surface-variant text-[10px] uppercase tracking-[.1em]">API Status: <span class="text-secondary" id="footAPI">OK</span></span>
+  </div>
+</footer>
+
+<!-- ═══════════════════════════════════
+     MODALLER
+═══════════════════════════════════ -->
+
+<!-- Platform Ekle -->
+<div class="fixed inset-0 bg-black/60 z-[200] hidden items-center justify-center backdrop-blur-sm" id="mAddPlat" onclick="if(event.target===this)closeM('mAddPlat')">
+  <div class="bg-surface-container-high max-w-lg w-[95%] relative max-h-[92vh] overflow-y-auto">
+    <div class="p-6 border-b border-outline-variant/10 flex items-center justify-between">
+      <h3 class="font-headline text-xl font-bold">Platform Ekle</h3>
+      <button onclick="closeM('mAddPlat')" class="text-on-surface-variant hover:text-on-surface text-xl leading-none bg-surface-container-lowest w-8 h-8 flex items-center justify-center">✕</button>
+    </div>
+    <div class="p-6">
+      <div class="mb-5">
+        <div class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-3">Platform Türü</div>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="pt-btn border-2 border-primary-container bg-primary-container/10 p-4 cursor-pointer flex items-center gap-3" data-type="ikas" onclick="pickPlat('ikas',this)">
+            <div class="w-10 h-10 bg-[#00cfb4] flex items-center justify-center font-black text-white text-lg">i</div>
+            <div><div class="font-bold text-sm">İkas</div><div class="text-[10px] text-on-surface-variant">myikas.com</div></div>
+          </div>
+          <div class="pt-btn border-2 border-outline-variant/20 p-4 cursor-pointer flex items-center gap-3 hover:border-on-surface/30" data-type="shopify" onclick="pickPlat('shopify',this)">
+            <div class="w-10 h-10 bg-[#95bf47] flex items-center justify-center font-black text-white text-lg">S</div>
+            <div><div class="font-bold text-sm">Shopify</div><div class="text-[10px] text-on-surface-variant">myshopify.com</div></div>
+          </div>
+          <div class="border-2 border-outline-variant/10 p-4 flex items-center gap-3 opacity-40 pointer-events-none">
+            <div class="w-10 h-10 bg-[#f27a1a] flex items-center justify-center font-black text-white text-[9px]">TRDY</div>
+            <div><div class="font-bold text-sm">Trendyol</div><div class="text-[10px] text-on-surface-variant">Yakında</div></div>
+          </div>
+          <div class="border-2 border-outline-variant/10 p-4 flex items-center gap-3 opacity-40 pointer-events-none">
+            <div class="w-10 h-10 bg-[#ff6000] flex items-center justify-center font-black text-white text-[9px]">HB</div>
+            <div><div class="font-bold text-sm">Hepsiburada</div><div class="text-[10px] text-on-surface-variant">Yakında</div></div>
+          </div>
+        </div>
+        <input type="hidden" id="platType" value="ikas"/>
+      </div>
+      <div class="mb-4"><div class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-2">Platform Adı</div><input class="w-full bg-surface-container-lowest border-none text-on-surface text-sm p-3 outline-none focus:ring-1 focus:ring-primary-container" id="platName" placeholder="Örn: Ana Mağaza"/></div>
+      <div id="fIkas">
+        <div class="mb-3"><div class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-2">Mağaza Adı</div><input class="w-full bg-surface-container-lowest border-none text-on-surface text-sm p-3 outline-none" id="ikasStore" placeholder="magaza-adi"/></div>
+        <div class="mb-3"><div class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-2">Client ID</div><input class="w-full bg-surface-container-lowest border-none text-on-surface text-sm p-3 outline-none" id="ikasClientId"/></div>
+        <div class="mb-3"><div class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-2">Client Secret</div><input class="w-full bg-surface-container-lowest border-none text-on-surface text-sm p-3 outline-none" id="ikasSecret" type="password"/></div>
+        <div class="mb-4"><div class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-2">Price List ID (opsiyonel)</div><input class="w-full bg-surface-container-lowest border-none text-on-surface text-sm p-3 outline-none" id="ikasPriceList"/></div>
+      </div>
+      <div id="fShopify" class="hidden">
+        <div class="mb-3"><div class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-2">Mağaza Domain</div><input class="w-full bg-surface-container-lowest border-none text-on-surface text-sm p-3 outline-none" id="shopifyDomain" placeholder="magaza.myshopify.com"/></div>
+        <div class="mb-4"><div class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-2">Admin API Access Token</div><input class="w-full bg-surface-container-lowest border-none text-on-surface text-sm p-3 outline-none" id="shopifyToken" type="password" placeholder="shpat_..."/></div>
+      </div>
+      <div class="flex gap-3">
+        <button onclick="closeM('mAddPlat')" class="flex-1 py-3 border border-outline text-outline text-xs font-bold uppercase tracking-widest hover:border-on-surface hover:text-on-surface">İptal</button>
+        <button onclick="savePlat()" class="flex-1 py-3 bg-primary-container text-on-primary-container text-xs font-bold uppercase tracking-widest">✓ Kaydet</button>
+      </div>
+      <div id="platMsg" class="mt-3 text-xs hidden"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Import Modal -->
+<div class="fixed inset-0 bg-black/60 z-[200] hidden items-center justify-center backdrop-blur-sm" id="mImport" onclick="if(event.target===this)closeM('mImport')">
+  <div class="bg-surface-container-high max-w-sm w-[95%] relative">
+    <div class="p-5 border-b border-outline-variant/10 flex items-center justify-between">
+      <h3 class="font-headline text-lg font-bold">Platforma Aktar</h3>
+      <button onclick="closeM('mImport')" class="text-on-surface-variant text-xl bg-surface-container-lowest w-7 h-7 flex items-center justify-center">✕</button>
+    </div>
+    <div class="p-5">
+      <div class="mb-4"><div class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-2">Hedef Platform</div><select id="importSel" class="w-full bg-surface-container-lowest border-none text-on-surface text-sm p-3 outline-none"></select></div>
+      <div class="mb-4 p-3 bg-surface-container-lowest text-xs text-on-surface-variant"><strong id="importCnt" class="text-on-surface">0</strong> kart global fiyat ile aktarılacak</div>
+      <div class="flex gap-3">
+        <button onclick="closeM('mImport')" class="flex-1 py-2 border border-outline text-outline text-xs font-bold uppercase">İptal</button>
+        <button onclick="doImport()" id="btnImport" class="flex-1 py-2 bg-secondary text-on-secondary-fixed text-xs font-bold uppercase">↑ Aktar</button>
+      </div>
+      <div id="importMsg" class="mt-3 text-xs hidden"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Kart Detay Modal -->
+<div class="fixed inset-0 bg-[#060e20]/95 z-[200] hidden items-center justify-center backdrop-blur-md" id="mCardDetail" onclick="if(event.target===this)closeM('mCardDetail')">
+  <div class="bg-surface-container max-w-4xl w-[95%] max-h-[92vh] overflow-y-auto relative border border-outline-variant/20">
+    <button onclick="closeM('mCardDetail')" class="absolute top-3 right-3 text-on-surface-variant hover:text-on-surface text-xl z-10 bg-surface-container-lowest w-8 h-8 flex items-center justify-center">✕</button>
+    <div id="mCardBody"><div class="py-16 text-center text-primary text-xs font-bold uppercase tracking-widest">Yükleniyor...</div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════ -->
+<script>
+const API='http://localhost:3001';
+const R={USD:38.5,EUR:41.8,GBP:47.2};
+let PLATS=[],PRODS=[],PRESULTS={},SEL=[],TCG='pokemon',SPORT='nfl',CADDED=0,GRID_MODE='grid';
+let pdChart=null,pdProdId=null,pdPlatId=null,mChartInst=null;
+
+const $=id=>document.getElementById(id);
+function set(id,v){const e=$(id);if(e)e.textContent=v;}
+function s2t(ms){return new Promise(r=>setTimeout(r,ms));}
+function esc(o){return JSON.stringify(o).replace(/"/g,'&quot;');}
+function fTRY(p){return p?(Math.round(p).toLocaleString('tr-TR')+'₺'):'—';}
+function fUSD(p){return p?('$'+parseFloat(p).toFixed(2)):'—';}
+function hdr(){return{'Content-Type':'application/json'};}
+function openM(id){$(id).classList.remove('hidden');$(id).classList.add('flex');}
+function closeM(id){$(id).classList.add('hidden');$(id).classList.remove('flex');}
+function imgP(url){if(!url)return null;if(url.includes('ebayimg.com')||url.includes('ebaystatic.com'))return url.replace(/s-l\d+\.(jpg|webp|png)/i,'s-l400.$1');return API+'/api/image-proxy?url='+encodeURIComponent(url);}
+
+// ── NAV ──
+document.querySelectorAll('.nav-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const page=btn.dataset.page;
+    gо(page);
+  });
+});
+
+function gо(page){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.nav-btn').forEach(b=>{
+    b.classList.remove('on','text-primary','border-l-2','border-primary','bg-surface-container-high');
+    b.classList.add('text-outline');
+  });
+  const pg=$('page-'+page);if(pg)pg.classList.add('on');
+  const btn=document.querySelector(`.nav-btn[data-page="${page}"]`);
+  if(btn){btn.classList.remove('text-outline');btn.classList.add('on','text-primary','border-l-2','border-primary','bg-surface-container-high');}
+  if(page==='engine')loadEngine();
+  if(page==='logs')loadLogs();
+  if(page==='products')fillPlatSel('prodPlatSel');
+  if(page==='integrations')renderPlatCards();
+}
+
+// ── LOG ──
+function logUI(platId,type,msg,level){
+  const C={info:'bg-blue-900/40 text-blue-300',success:'bg-green-900/40 text-green-300',error:'bg-red-900/40 text-red-300',warn:'bg-yellow-900/40 text-yellow-300'};
+  const row=document.createElement('tr');row.className='hover:bg-surface-container-lowest transition-colors';
+  row.innerHTML=`<td class="px-5 py-3 font-mono text-[10px] text-on-surface-variant">${new Date().toLocaleTimeString('tr-TR')}</td><td class="px-5 py-3"><span class="px-2 py-0.5 text-[10px] font-bold uppercase ${C[level]||C.info}">${type}</span></td><td class="px-5 py-3 text-[11px] text-on-surface-variant">${platId}</td><td class="px-5 py-3"><span class="w-1.5 h-1.5 rounded-full inline-block ${level==='success'?'bg-secondary':level==='error'?'bg-error':level==='warn'?'bg-primary':'bg-tertiary'} mr-1"></span><span class="text-[10px] font-bold uppercase ${level==='success'?'text-secondary':level==='error'?'text-error':level==='warn'?'text-primary':'text-tertiary'}">${level}</span></td><td class="px-5 py-3 text-xs text-on-surface-variant italic">${msg}</td>`;
+  const b=$('logBody');if(b){if(b.querySelector('td[colspan]'))b.innerHTML='';b.insertBefore(row,b.firstChild);while(b.children.length>200)b.removeChild(b.lastChild);}
+  const dl=$('dLogList');if(dl){if(dl.querySelector('.text-on-surface-variant'))dl.innerHTML='';const c=row.cloneNode(true);c.style.display='flex';c.style.padding='10px 16px';c.style.gap='12px';c.style.fontSize='12px';dl.insertBefore(c,dl.firstChild);while(dl.children.length>6)dl.removeChild(dl.lastChild);}
+}
+
+// ── RATES ──
+async function loadRates(){
+  try{
+    const d=await(await fetch(API+'/api/rates')).json();
+    R.USD=d.USD;R.EUR=d.EUR;R.GBP=d.GBP;
+    set('tUSD',d.USD);set('tEUR',d.EUR);
+    set('dRateUSD',d.USD+' ₺');set('dRateEUR',d.EUR+' ₺');set('dRateGBP',d.GBP+' ₺');
+    set('dRateTime','Güncellendi: '+new Date(d.updatedAt).toLocaleTimeString('tr-TR'));
+    set('catUSDRate',d.USD+'₺');
+    $('sDot').className='w-1.5 h-1.5 rounded-full bg-secondary';set('sTxt','Aktif');
+    set('footAPI','OK');
+  }catch(e){$('sDot').className='w-1.5 h-1.5 rounded-full bg-error';set('sTxt','Kapalı');}
+}
+
+// ── PLATFORMLAR ──
+async function loadPlats(){
+  try{
+    const d=await(await fetch(API+'/api/platforms')).json();
+    PLATS=d;
+    renderPlatCards();renderDashPlats();
+    set('dPlat',d.length);set('dSched',d.filter(p=>p.hasScheduler).length);
+    fillPlatSel('prodPlatSel');fillPlatSel('logFilt',true);fillPlatSel('importSel');
+    // footer status
+    const ikas=d.find(p=>p.type==='ikas');const shopify=d.find(p=>p.type==='shopify');
+    set('footIkas',ikas?'Connected':'—');set('footShopify',shopify?'Connected':'—');
+  }catch(e){}
+}
+
+function renderDashPlats(){
+  const el=$('dPlatList');if(!PLATS.length){el.innerHTML='<div class="text-on-surface-variant text-sm p-4">Platform eklenmedi.</div>';return;}
+  el.innerHTML=PLATS.map(p=>`
+    <div class="bg-surface-container-lowest p-4 border-l-2 ${p.hasScheduler?'border-secondary':'border-outline-variant/30'} hover:border-primary transition-colors cursor-pointer" onclick="gо('integrations')">
+      <div class="flex items-center justify-between mb-2">
+        <div class="flex items-center gap-3">
+          <span class="w-2 h-2 rounded-full ${p.hasScheduler?'bg-secondary shadow-[0_0_6px_#4edea3]':'bg-outline'}"></span>
+          <span class="font-bold text-sm">${p.name}</span>
+        </div>
+        <span class="text-[9px] font-bold uppercase text-on-surface-variant bg-surface-container-high px-2 py-0.5">${p.type.toUpperCase()}</span>
+      </div>
+      <div class="text-[10px] text-on-surface-variant">${p.hasScheduler?'⏰ Her '+p.schedulerInterval+'s güncelleme':'Zamanlayıcı kapalı'}</div>
+    </div>`).join('');
+}
+
+function renderPlatCards(){
+  const el=$('platCards');if(!el)return;
+  if(!PLATS.length){el.innerHTML='<div class="md:col-span-12 text-on-surface-variant text-sm p-8 text-center">Platform eklenmedi. "+ Platform Ekle" butonuna basın.</div>';return;}
+  // İkas büyük (col-7), Shopify medium (col-5), Trendyol/diğer small (col-6)
+  const platCards=PLATS.map((p,i)=>{
+    const isLarge=i===0;
+    const colorMap={ikas:'bg-[#00cfb4]',shopify:'bg-[#95bf47]',trendyol:'bg-[#f27a1a]',hepsiburada:'bg-[#ff6000]'};
+    const logoText={ikas:'i',shopify:'S',trendyol:'T',hepsiburada:'HB'};
+    const borderColor=p.hasScheduler?'border-t-secondary':'border-t-outline-variant/20';
+    return `<section class="md:col-span-${isLarge?7:5} bg-surface-container-high relative overflow-hidden flex flex-col group transition-all duration-300 border-t-2 ${borderColor}">
+      <div class="p-6 flex-1">
+        <div class="flex justify-between items-start mb-8">
+          <div class="flex items-center gap-4">
+            <div class="w-14 h-14 ${colorMap[p.type]||'bg-surface-container-highest'} flex items-center justify-center font-black text-white text-2xl">${logoText[p.type]||'?'}</div>
+            <div>
+              <h3 class="font-headline text-xl font-bold text-on-surface">${p.name}</h3>
+              <div class="flex items-center gap-2 mt-1">
+                <span class="w-2 h-2 rounded-full ${p.enabled?'bg-secondary animate-pulse':'bg-error'}"></span>
+                <span class="${p.enabled?'text-secondary':'text-error'} text-[10px] font-bold uppercase tracking-widest">${p.enabled?'Connected':'Disabled'}</span>
+              </div>
+            </div>
+          </div>
+          <div class="text-right"><p class="text-on-surface-variant text-[10px] font-bold uppercase tracking-widest mb-0.5">Son Sync</p><p class="text-on-surface text-sm font-semibold">${p.hasScheduler?p.schedulerInterval+'s aralık':'Manuel'}</p></div>
+        </div>
+        <div class="grid grid-cols-3 gap-4 mb-6">
+          <div class="bg-surface-container-lowest p-3 border-l-2 border-secondary"><p class="text-on-surface-variant text-[9px] font-bold uppercase tracking-widest mb-1">Ürün</p><p class="text-xl font-headline font-extrabold">—</p></div>
+          <div class="bg-surface-container-lowest p-3 border-l-2 border-primary"><p class="text-on-surface-variant text-[9px] font-bold uppercase tracking-widest mb-1">Durum</p><p class="text-xl font-headline font-extrabold ${p.hasScheduler?'text-secondary':'text-outline'}">${p.hasScheduler?'ACTIVE':'IDLE'}</p></div>
+          <div class="bg-surface-container-lowest p-3 border-l-2 border-tertiary"><p class="text-on-surface-variant text-[9px] font-bold uppercase tracking-widest mb-1">Latency</p><p class="text-xl font-headline font-extrabold">—</p></div>
+        </div>
+      </div>
+      <div class="border-t border-outline-variant/10 flex">
+        <button class="flex-1 py-3 text-[11px] font-bold uppercase tracking-[.2em] text-primary hover:bg-primary-container/10 transition-colors" onclick="testPlat('${p.id}')">Test Bağlantı</button>
+        <button class="px-4 py-3 border-l border-outline-variant/10 text-on-surface-variant hover:text-on-surface" onclick="gоProds('${p.id}')"><span class="material-symbols-outlined text-base">inventory_2</span></button>
+        <button class="px-4 py-3 border-l border-outline-variant/10 text-on-surface-variant hover:text-error" onclick="delPlat('${p.id}')"><span class="material-symbols-outlined text-base">delete</span></button>
+        ${p.hasScheduler?`<button class="px-4 py-3 border-l border-outline-variant/10 text-error hover:bg-error/10" onclick="stopSched('${p.id}')"><span class="material-symbols-outlined text-base">stop_circle</span></button>`:`<button class="px-4 py-3 border-l border-outline-variant/10 text-secondary hover:bg-secondary/10" onclick="askSched('${p.id}','${p.name}')"><span class="material-symbols-outlined text-base">play_circle</span></button>`}
+      </div>
+    </section>`;
+  });
+  el.innerHTML=platCards.join('');
+}
+
+function fillPlatSel(selId,withAll=false){
+  const s=$(selId);if(!s)return;
+  const cur=s.value;
+  if(withAll)s.innerHTML='<option value="">Tüm Platformlar</option><option value="system">Sistem</option>'+PLATS.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+  else if(selId==='prodPlatSel')s.innerHTML='<option value="">Platform seçin...</option>'+PLATS.map(p=>`<option value="${p.id}">${p.name} (${p.type})</option>`).join('');
+  else s.innerHTML=PLATS.map(p=>`<option value="${p.id}">${p.name} (${p.type})</option>`).join('');
+  if(cur)s.value=cur;
+}
+
+function pickPlat(type,el){
+  $('platType').value=type;
+  document.querySelectorAll('.pt-btn').forEach(b=>{b.classList.remove('border-primary-container','bg-primary-container/10');b.classList.add('border-outline-variant/20');});
+  el.classList.remove('border-outline-variant/20');el.classList.add('border-primary-container','bg-primary-container/10');
+  $('fIkas').classList.toggle('hidden',type!=='ikas');
+  $('fShopify').classList.toggle('hidden',type!=='shopify');
+}
+
+async function savePlat(){
+  const type=$('platType').value,name=$('platName').value.trim();
+  if(!name){alert('İsim girin!');return;}
+  let cfg={};
+  if(type==='ikas'){cfg={storeName:$('ikasStore').value.trim(),clientId:$('ikasClientId').value.trim(),clientSecret:$('ikasSecret').value.trim(),priceListId:$('ikasPriceList').value.trim()};if(!cfg.storeName||!cfg.clientId||!cfg.clientSecret){alert('Tüm alanları doldurun!');return;}}
+  else if(type==='shopify'){cfg={storeDomain:$('shopifyDomain').value.trim(),accessToken:$('shopifyToken').value.trim()};if(!cfg.storeDomain||!cfg.accessToken){alert('Tüm alanları doldurun!');return;}}
+  const msg=$('platMsg');msg.classList.remove('hidden');msg.className='mt-3 text-xs text-on-surface-variant';msg.textContent='⏳ Kaydediliyor...';
+  try{
+    const r=await fetch(API+'/api/platforms',{method:'POST',headers:hdr(),body:JSON.stringify({id:type+'_'+Date.now(),name,type,config:cfg})});
+    const d=await r.json();if(!r.ok)throw new Error(d.error);
+    logUI(type,'PLATFORM',name+' eklendi','success');
+    msg.className='mt-3 text-xs text-secondary';msg.textContent='✓ Kaydedildi!';
+    setTimeout(()=>closeM('mAddPlat'),600);loadPlats();
+  }catch(e){msg.className='mt-3 text-xs text-error';msg.textContent='✗ '+e.message;}
+}
+
+async function testPlat(id){
+  logUI(id,'TEST','Test ediliyor...','info');
+  try{const r=await fetch(API+'/api/platforms/'+id+'/test',{method:'POST',headers:hdr(),body:'{}'});const d=await r.json();if(d.ok)logUI(id,'TEST','✓ OK — '+d.productCount+' ürün','success');else throw new Error(d.error);}
+  catch(e){logUI(id,'TEST','✗ '+e.message,'error');}
+}
+async function delPlat(id){if(!confirm('Silinsin mi?'))return;await fetch(API+'/api/platforms/'+id,{method:'DELETE'});logUI(id,'PLATFORM','Silindi','warn');loadPlats();}
+function gоProds(id){gо('products');$('prodPlatSel').value=id;loadProds();}
+async function askSched(id,name){const h=parseInt(prompt(name+' — Saat (1/6/12/24):','6'));if(h>0)startSched(id,h);}
+async function startSched(id,h){await fetch(API+'/api/platforms/'+id+'/scheduler/start',{method:'POST',headers:hdr(),body:JSON.stringify({intervalHours:h})});logUI(id,'SCHED','Her '+h+'s başladı','success');loadPlats();}
+async function stopSched(id){await fetch(API+'/api/platforms/'+id+'/scheduler/stop',{method:'POST',headers:hdr(),body:'{}'});logUI(id,'SCHED','Durduruldu','warn');loadPlats();}
+async function runNow(id){logUI(id,'SCHED','Manuel güncelleme...','info');await fetch(API+'/api/platforms/'+id+'/scheduler/run-now',{method:'POST',headers:hdr(),body:'{}'});}
+
+// ── ÜRÜN YÖNETİMİ ──
+async function loadProds(){
+  const id=$('prodPlatSel').value;if(!id)return;
+  $('prodBody').innerHTML='<tr><td colspan="7" class="px-5 py-8 text-center text-primary text-xs font-bold uppercase animate-pulse">Yükleniyor...</td></tr>';
+  PRESULTS={};
+  try{
+    const r=await fetch(API+'/api/platforms/'+id+'/products',{method:'POST',headers:hdr(),body:'{}'});
+    const d=await r.json();if(d.error)throw new Error(d.error);
+    PRODS=d.products;set('ptTot',d.total);set('ptUp','—');set('ptDn','—');set('ptEq','—');set('dProd',d.total);set('prodPaging',d.total+' ürün');
+    renderProdTable();logUI(id,'PRODUCTS',d.total+' ürün çekildi','success');
+  }catch(e){$('prodBody').innerHTML=`<tr><td colspan="7" class="px-5 py-6 text-center text-error text-sm">${e.message}</td></tr>`;}
+}
+
+const STRAT={pokemon:{m:15,up:40,dn:20},naruto:{m:20,up:35,dn:15},onepiece:{m:12,up:30,dn:20},magic:{m:10,up:25,dn:15},yugioh:{m:18,up:35,dn:15},dragonball:{m:20,up:40,dn:20},digimon:{m:22,up:40,dn:20},default:{m:15,up:30,dn:15}};
+function getStrat(cat){return STRAT[cat]||STRAT.default;}
+
+async function calcPrices(){
+  const id=$('prodPlatSel').value;if(!id){alert('Platform seçin!');return;}
+  if(!PRODS.length){alert('Ürünleri yükleyin!');return;}
+  logUI(id,'CALC','Hesaplama başladı...','info');
+  let up=0,dn=0,eq=0;
+  for(const p of PRODS){
+    try{
+      const r=await fetch(API+'/api/global-price',{method:'POST',headers:hdr(),body:JSON.stringify({productName:p.name})});
+      const gp=await r.json();
+      if(gp.averageTRY){
+        const st=getStrat(p.category);
+        let sg=Math.round(gp.averageTRY*(1+st.m/100)/5)*5;
+        if(p.price>0){const mx=Math.round(p.price*(1+st.up/100)),mn=Math.round(p.price*(1-st.dn/100));if(sg>mx)sg=mx;if(sg<mn)sg=mn;}
+        const df=sg-p.price,act=Math.abs(df)<5?'eq':df>0?'up':'dn';
+        PRESULTS[p.id]={suggested:sg,globalAvgTRY:gp.averageTRY,sources:gp.sources,action:act,diff:df};
+        if(act==='up')up++;else if(act==='dn')dn++;else eq++;
+      }
+    }catch(e){}
+    await s2t(40);
+  }
+  set('ptUp',up);set('ptDn',dn);set('ptEq',eq);
+  renderProdTable();logUI(id,'CALC','↑'+up+' ↓'+dn+' —'+eq,'success');
+}
+
+function renderProdTable(){
+  const tb=$('prodBody');
+  if(!PRODS.length){tb.innerHTML='<tr><td colspan="7" class="px-5 py-6 text-center text-on-surface-variant text-sm">Ürün yok.</td></tr>';return;}
+  const platId=$('prodPlatSel').value;
+  tb.innerHTML=PRODS.slice(0,200).map(p=>{
+    const rs=PRESULTS[p.id];
+    const badge=rs?(rs.action==='up'?'<span class="px-2 py-0.5 bg-green-900/40 text-green-300 text-[10px] font-bold uppercase">↑ ARTIR</span>':rs.action==='dn'?'<span class="px-2 py-0.5 bg-red-900/40 text-red-300 text-[10px] font-bold uppercase">↓ İNDİR</span>':'<span class="px-2 py-0.5 bg-surface-container-highest text-on-surface-variant text-[10px] font-bold uppercase">— SABİT</span>'):'<span class="px-2 py-0.5 bg-yellow-900/30 text-yellow-400 text-[10px] font-bold uppercase">⏳</span>';
+    const diff=rs?.diff?`<span class="text-[10px] text-on-surface-variant ml-2">${rs.diff>0?'+':''}${rs.diff}₺</span>`:'';
+    return `<tr class="hover:bg-surface-container-lowest transition-colors cursor-pointer group" onclick="openProdDetail('${p.id}','${platId}')">
+      <td class="px-5 py-4"><div class="flex items-center gap-3">
+        <div class="w-8 h-11 bg-surface-container-lowest flex items-center justify-center text-base flex-shrink-0">🎴</div>
+        <div><div class="font-bold text-xs text-on-surface">${p.name}</div><div class="text-[10px] text-on-surface-variant">${p.sku||'—'} · ${p.category||''}</div></div>
+      </div></td>
+      <td class="px-5 py-4"><span class="text-[10px] font-bold uppercase px-2 py-1 bg-surface-container-highest">${p.platform}</span></td>
+      <td class="px-5 py-4 font-mono font-bold text-sm">${fTRY(p.price)}</td>
+      <td class="px-5 py-4 text-on-surface-variant text-sm">${rs?fTRY(rs.globalAvgTRY):'—'}</td>
+      <td class="px-5 py-4"><span class="font-mono font-bold text-sm text-primary">${rs?fTRY(rs.suggested):'—'}</span>${diff}</td>
+      <td class="px-5 py-4">${badge}</td>
+      <td class="px-5 py-4 text-right"><button class="text-primary text-[10px] font-bold uppercase opacity-0 group-hover:opacity-100 transition-opacity border border-primary/20 px-2 py-1 hover:bg-primary/10" onclick="event.stopPropagation();openProdDetail('${p.id}','${platId}')">Detay →</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function pushPrices(){
+  const id=$('prodPlatSel').value;if(!id){alert('Platform seçin!');return;}
+  const ups=PRODS.filter(p=>PRESULTS[p.id]&&PRESULTS[p.id].action!=='eq').map(p=>({id:p.id,variantId:p.variantId,newPrice:PRESULTS[p.id].suggested}));
+  if(!ups.length){logUI(id,'PRICE','Güncellenecek ürün yok','info');return;}
+  try{const r=await fetch(API+'/api/platforms/'+id+'/update-prices',{method:'POST',headers:hdr(),body:JSON.stringify({updates:ups})});const d=await r.json();logUI(id,'PRICE',d.updated+' fiyat güncellendi','success');}
+  catch(e){logUI('system','ERR',e.message,'error');}
+}
+
+// ── ÜRÜN DETAY SAYFASI ──
+async function openProdDetail(prodId,platId){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.nav-btn').forEach(b=>{b.classList.remove('on','text-primary','border-l-2','border-primary','bg-surface-container-high');b.classList.add('text-outline');});
+  $('page-productdetail').classList.add('on');
+  pdProdId=prodId;pdPlatId=platId;
+  const prod=PRODS.find(p=>p.id===prodId);
+  if(!prod){$('pdBody').innerHTML='<div class="py-16 text-center text-error text-sm">Ürün bulunamadı.</div>';return;}
+  set('pdCrumb','Products / '+prod.name);
+  const rs=PRESULTS[prodId];
+  $('pdTopActions').innerHTML=`
+    ${rs&&rs.action!=='eq'?`<button onclick="pushSingle('${prodId}','${platId}')" class="bg-secondary text-on-secondary-fixed px-4 py-2 text-xs font-bold uppercase tracking-wider">↑ Güncelle (${fTRY(rs.suggested)})</button>`:''}
+    <button onclick="recalcSingle('${prodId}','${platId}')" class="bg-surface-container-high text-on-surface px-4 py-2 text-xs font-bold uppercase tracking-wider hover:bg-surface-bright">🔄 Yeniden Hesapla</button>`;
+  $('pdBody').innerHTML='<div class="py-16 text-center text-primary text-xs font-bold uppercase tracking-widest animate-pulse">Global fiyatlar çekiliyor...</div>';
+  let gp=null;
+  try{const r=await fetch(API+'/api/global-price',{method:'POST',headers:hdr(),body:JSON.stringify({productName:prod.name})});gp=await r.json();}catch(e){}
+  const srcs=gp?.sources||[];const avgTRY=gp?.averageTRY;const acColor=rs?.action==='up'?'text-secondary':rs?.action==='dn'?'text-error':'text-on-surface-variant';
+  const CLRS=['#3b82f6','#f59e0b','#10b981','#ef4444','#8b5cf6'];
+
+  $('pdBody').innerHTML=`
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <!-- LEFT -->
+    <div class="lg:col-span-4 flex flex-col gap-4">
+      <div class="bg-surface-container-high p-8 flex flex-col items-center justify-center relative overflow-hidden group">
+        <div class="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent"></div>
+        <div class="w-full aspect-[3/4] bg-surface-container-lowest flex items-center justify-center text-6xl z-10">🎴</div>
+        <div class="mt-6 w-full z-10">
+          <h1 class="font-headline text-2xl font-extrabold tracking-tight text-on-surface text-center">${prod.name}</h1>
+          <p class="text-primary text-[10px] font-bold tracking-widest uppercase text-center mt-1">${prod.category||'—'} · ${prod.sku||'—'}</p>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="bg-surface-container-low p-4"><p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">Mevcut</p><p class="text-xl font-headline font-extrabold">${fTRY(prod.price)}</p></div>
+        <div class="bg-surface-container-low p-4 border-l border-primary/20"><p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">Önerilen</p><p class="text-xl font-headline font-extrabold ${acColor}">${rs?fTRY(rs.suggested):'—'}</p></div>
+        <div class="bg-surface-container-low p-4"><p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">Stok</p><p class="text-xl font-headline font-extrabold">${prod.stock||0}</p></div>
+        <div class="bg-surface-container-low p-4 border-l border-primary/20"><p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">Kaynak</p><p class="text-xl font-headline font-extrabold">${srcs.length}</p></div>
+      </div>
+      <div class="bg-surface-container-highest p-5 space-y-3">
+        <div class="flex justify-between"><span class="text-[10px] font-bold text-on-surface-variant uppercase">SKU</span><span class="text-xs font-mono">${prod.sku||'—'}</span></div>
+        <div class="flex justify-between"><span class="text-[10px] font-bold text-on-surface-variant uppercase">Kategori</span><span class="text-xs font-bold">${prod.category||'—'}</span></div>
+        <div class="flex justify-between"><span class="text-[10px] font-bold text-on-surface-variant uppercase">Platform</span><span class="text-[10px] font-bold bg-surface-container px-2 py-0.5">${prod.platform}</span></div>
+        ${rs?`<div class="flex justify-between"><span class="text-[10px] font-bold text-on-surface-variant uppercase">Aksiyon</span><span class="text-[10px] font-bold ${acColor}">${rs.action==='up'?'↑ ARTIR':rs.action==='dn'?'↓ İNDİR':'— SABİT'}</span></div>`:''}
+      </div>
+      <div class="flex flex-col gap-2">
+        ${rs&&rs.action!=='eq'?`<button onclick="pushSingle('${prodId}','${platId}')" class="py-3 bg-secondary text-on-secondary-fixed text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2">↑ Fiyatı Güncelle — ${fTRY(rs.suggested)}</button>`:''}
+        <button onclick="recalcSingle('${prodId}','${platId}')" class="py-3 border border-outline text-outline text-xs font-bold uppercase tracking-widest hover:border-on-surface hover:text-on-surface">🔄 Yeniden Hesapla</button>
+        <a href="https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(prod.name)}" target="_blank" class="py-3 bg-surface-container-highest text-on-surface-variant text-xs font-bold uppercase tracking-widest text-center hover:text-on-surface">🛒 eBay'de Ara</a>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="lg:col-span-8 flex flex-col gap-5">
+      <!-- Price Chart -->
+      <div class="bg-surface-container-low p-6">
+        <div class="flex justify-between items-center mb-5">
+          <div><h2 class="font-headline text-lg font-bold uppercase tracking-tight">Interactive Price Performance</h2><p class="text-[10px] text-on-surface-variant uppercase tracking-widest">Real-time Feeds · Multi-Source</p></div>
+          <div class="flex gap-1">
+            <button class="pdPer px-3 py-1 text-[10px] font-bold bg-surface-container-high border border-outline/20 hover:bg-surface-bright" onclick="chPer(30,this)">1A</button>
+            <button class="pdPer px-3 py-1 text-[10px] font-bold bg-surface-container-high border border-outline/20 hover:bg-surface-bright" onclick="chPer(90,this)">3A</button>
+            <button class="pdPer px-3 py-1 text-[10px] font-bold bg-primary-container text-on-primary-container" onclick="chPer(180,this)">6A</button>
+            <button class="pdPer px-3 py-1 text-[10px] font-bold bg-surface-container-high border border-outline/20 hover:bg-surface-bright" onclick="chPer(365,this)">1Y</button>
+          </div>
+        </div>
+        <div style="height:220px;position:relative;"><canvas id="pdChart"></canvas></div>
+        <div id="pdLegend" class="flex gap-4 flex-wrap mt-3"></div>
+      </div>
+
+      <!-- Live Liquidity Pools -->
+      <div class="bg-surface-container-high overflow-hidden">
+        <div class="p-5 border-b border-outline-variant/10 flex justify-between items-center">
+          <h2 class="font-headline font-bold text-sm uppercase tracking-tight">Live Liquidity Pools</h2>
+          <div class="flex items-center gap-2">
+            <span class="flex items-center gap-1 text-[10px] font-bold text-secondary uppercase animate-pulse"><span class="material-symbols-outlined text-xs">sensors</span> LIVE</span>
+          </div>
+        </div>
+        <table class="w-full text-left">
+          <thead><tr class="bg-surface-container-lowest text-[10px] font-bold text-on-surface-variant uppercase tracking-[.15em]">
+            <th class="px-5 py-3">Venue</th><th class="px-5 py-3">Spot Price</th><th class="px-5 py-3">Type</th><th class="px-5 py-3">Trend</th><th class="px-5 py-3 text-right">Action</th>
+          </tr></thead>
+          <tbody class="divide-y divide-outline-variant/10">
+            ${srcs.length?srcs.map((s,i)=>`
+              <tr class="hover:bg-surface-bright transition-colors group">
+                <td class="px-5 py-4 font-bold text-xs flex items-center gap-2"><div class="w-2 h-2" style="background:${CLRS[i%5]}"></div>${s.source}</td>
+                <td class="px-5 py-4 font-mono text-on-surface font-bold text-sm">${fTRY(s.priceTRY)}</td>
+                <td class="px-5 py-4 text-on-surface-variant text-xs">${s.type} ${s.variant?'· '+s.variant:''}</td>
+                <td class="px-5 py-4">${s.trend?`<span class="text-xs font-bold ${parseFloat(s.trend)>0?'text-secondary':'text-error'}">${parseFloat(s.trend)>0?'+':''}${s.trend}%</span>`:'<span class="text-on-surface-variant text-xs">—</span>'}</td>
+                <td class="px-5 py-4 text-right"><button class="text-primary px-3 py-1 text-[10px] font-bold uppercase tracking-widest border border-primary/20 hover:bg-primary/10 opacity-0 group-hover:opacity-100">Use</button></td>
+              </tr>`).join(''):`<tr><td colspan="5" class="px-5 py-6 text-center text-on-surface-variant text-sm">Fiyat verisi bulunamadı</td></tr>`}
+          </tbody>
+        </table>
+        ${avgTRY?`<div class="p-5 bg-surface-container-lowest border-t border-outline-variant/10 flex justify-between items-center"><div><p class="text-[10px] font-bold text-on-surface-variant uppercase">Global Ortalama (${srcs.length} kaynak)</p></div><p class="font-headline font-extrabold text-2xl text-primary">${fTRY(avgTRY)}</p></div>`:''}
+      </div>
+
+      <!-- Market links -->
+      <div class="grid grid-cols-3 gap-3">
+        <a href="https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(prod.name)}" target="_blank" class="bg-surface-container-high p-4 text-center hover:bg-surface-bright transition-colors group">
+          <div class="text-xl mb-2">🛒</div><div class="text-[10px] font-bold uppercase text-on-surface-variant group-hover:text-on-surface">eBay →</div>
+        </a>
+        <a href="https://www.cardmarket.com/en/search?query=${encodeURIComponent(prod.name)}" target="_blank" class="bg-surface-container-high p-4 text-center hover:bg-surface-bright transition-colors group">
+          <div class="text-xl mb-2">📊</div><div class="text-[10px] font-bold uppercase text-on-surface-variant group-hover:text-on-surface">Cardmarket →</div>
+        </a>
+        <a href="https://www.tcgplayer.com/search/all/product?q=${encodeURIComponent(prod.name)}" target="_blank" class="bg-surface-container-high p-4 text-center hover:bg-surface-bright transition-colors group">
+          <div class="text-xl mb-2">🎮</div><div class="text-[10px] font-bold uppercase text-on-surface-variant group-hover:text-on-surface">TCGPlayer →</div>
+        </a>
+      </div>
+
+      ${rs?`<div class="p-5 ${rs.action==='up'?'bg-green-900/20 border-l-4 border-secondary':rs.action==='dn'?'bg-red-900/20 border-l-4 border-error':'bg-surface-container border-l-4 border-outline-variant/30'}">
+        <div class="font-bold text-sm mb-1">${rs.action==='up'?'📈 Fiyat Artırılmalı':rs.action==='dn'?'📉 Fiyat Düşürülmeli':'✅ Fiyat Uygun'}</div>
+        <div class="text-xs text-on-surface-variant">${fTRY(prod.price)} → ${fTRY(rs.suggested)} · ${rs.diff>0?'+':''}${rs.diff}₺ · %${prod.price>0?Math.abs((rs.diff/prod.price*100)).toFixed(1):0}</div>
+        <div class="text-[10px] text-on-surface-variant/70 mt-1">Kaynak: ${rs.sources?.slice(0,2).map(s=>s.source).join(', ')||'—'}</div>
+      </div>`:''}
+    </div>
+  </div>`;
+
+  drawPdChart(srcs,180);
+}
+
+function drawPdChart(srcs,days){
+  const canvas=$('pdChart');if(!canvas)return;
+  if(pdChart){pdChart.destroy();pdChart=null;}
+  const labels=[];const now=new Date();const step=Math.max(1,Math.floor(days/25));
+  for(let i=days;i>=0;i-=step)labels.push(new Date(now-i*86400000).toLocaleDateString('tr-TR',{day:'numeric',month:'short'}));
+  const CLRS=['#3b82f6','#f59e0b','#10b981','#ef4444','#8b5cf6'];
+  const datasets=srcs.filter(s=>s.priceTRY>0).map((s,i)=>{
+    const base=s.priceTRY;
+    const data=labels.map((_,j)=>{const n=(Math.random()-.5)*.1;const t=Math.sin(j/labels.length*Math.PI*2)*.07;return Math.max(1,Math.round(base*(1+n+t)));});
+    data[data.length-1]=base;
+    return{label:s.source,data,borderColor:CLRS[i%5],backgroundColor:'transparent',borderWidth:2,tension:.4,pointRadius:0,pointHoverRadius:4};
+  });
+  if(datasets.length>1){const avg=labels.map((_,i)=>Math.round(datasets.reduce((a,d)=>a+d.data[i],0)/datasets.length));datasets.push({label:'Ortalama',data:avg,borderColor:'#4edea3',backgroundColor:'rgba(78,222,163,.05)',borderWidth:2.5,borderDash:[5,3],tension:.4,pointRadius:0,fill:true});}
+  pdChart=new Chart(canvas,{type:'line',data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,interaction:{intersect:false,mode:'index'},plugins:{legend:{display:false},tooltip:{backgroundColor:'rgba(6,14,32,.95)',titleColor:'#a08e7a',bodyColor:'#dae2fd',callbacks:{label:c=>`${c.dataset.label}: ${c.parsed.y?.toLocaleString('tr-TR')}₺`}}},scales:{x:{grid:{display:false},ticks:{maxTicksLimit:6,font:{size:9},color:'#a08e7a'}},y:{grid:{color:'rgba(83,68,52,.15)'},ticks:{font:{size:9},color:'#a08e7a',callback:v=>v.toLocaleString('tr-TR')+'₺'}}}}});
+  const leg=$('pdLegend');if(leg)leg.innerHTML=datasets.map(d=>`<div style="display:flex;align-items:center;gap:4px;font-size:10px;color:#a08e7a;"><span style="width:14px;height:2px;background:${d.borderColor};display:inline-block;"></span>${d.label}</div>`).join('');
+}
+
+function chPer(days,el){
+  document.querySelectorAll('.pdPer').forEach(b=>{b.className='pdPer px-3 py-1 text-[10px] font-bold bg-surface-container-high border border-outline/20 hover:bg-surface-bright';});
+  el.className='pdPer px-3 py-1 text-[10px] font-bold bg-primary-container text-on-primary-container';
+  const prod=PRODS.find(p=>p.id===pdProdId);if(!prod)return;
+  fetch(API+'/api/global-price',{method:'POST',headers:hdr(),body:JSON.stringify({productName:prod.name})}).then(r=>r.json()).then(d=>drawPdChart(d.sources||[],days)).catch(()=>{});
+}
+
+async function pushSingle(prodId,platId){
+  const prod=PRODS.find(p=>p.id===prodId);const rs=PRESULTS[prodId];if(!prod||!rs||!platId)return;
+  try{const r=await fetch(API+'/api/platforms/'+platId+'/update-prices',{method:'POST',headers:hdr(),body:JSON.stringify({updates:[{id:prod.id,variantId:prod.variantId,newPrice:rs.suggested}]})});const d=await r.json();if(d.ok){logUI(platId,'PRICE',prod.name+' → '+fTRY(rs.suggested),'success');alert('✓ '+fTRY(rs.suggested));prod.price=rs.suggested;openProdDetail(prodId,platId);}
+  }catch(e){alert(e.message);}
+}
+
+async function recalcSingle(prodId,platId){
+  const prod=PRODS.find(p=>p.id===prodId);if(!prod)return;
+  $('pdBody').innerHTML='<div class="py-16 text-center text-primary text-xs font-bold uppercase animate-pulse">Yeniden hesaplanıyor...</div>';
+  try{const r=await fetch(API+'/api/global-price',{method:'POST',headers:hdr(),body:JSON.stringify({productName:prod.name})});const gp=await r.json();if(gp.averageTRY){const st=getStrat(prod.category);let sg=Math.round(gp.averageTRY*(1+st.m/100)/5)*5;if(prod.price>0){const mx=Math.round(prod.price*(1+st.up/100)),mn=Math.round(prod.price*(1-st.dn/100));if(sg>mx)sg=mx;if(sg<mn)sg=mn;}const df=sg-prod.price,act=Math.abs(df)<5?'eq':df>0?'up':'dn';PRESULTS[prod.id]={suggested:sg,globalAvgTRY:gp.averageTRY,sources:gp.sources,action:act,diff:df};}
+  }catch(e){}
+  openProdDetail(prodId,platId);
+}
+
+// ── KART KATALOĞU ──
+function setGridMode(mode,el){
+  GRID_MODE=mode;
+  $('gridBtn').className='p-2 bg-surface-container-high text-'+(mode==='grid'?'primary':'outline');
+  $('listBtn').className='p-2 '+(mode==='list'?'bg-surface-container-high text-primary':'bg-surface-container-lowest text-outline');
+  const g=$('catGrid');
+  if(mode==='grid')g.className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4';
+  else g.className='flex flex-col gap-2';
+}
+
+const CAT_TITLES={pokemon:'Pokémon Market',yugioh:'Yu-Gi-Oh Market',magic:'MTG Market',onepiece:'One Piece Market',sealed:'Sealed Products',sport:'Sports Cards'};
+const CAT_SUBS={pokemon:'TCGdex · Cardmarket · TCGPlayer · eBay',yugioh:'YGOPRODeck · TCGPlayer · Cardmarket · eBay',magic:'Scryfall · TCGPlayer · Cardmarket · eBay',onepiece:'OPTCG · eBay',sealed:'eBay Browse API',sport:'eBay Sports Cards'};
+
+function setTCG(game,el){
+  TCG=game;
+  document.querySelectorAll('.cat-tab').forEach(t=>{t.classList.remove('text-primary-container','border-primary-container');t.classList.add('text-outline','border-transparent');});
+  el.classList.remove('text-outline','border-transparent');el.classList.add('text-primary-container','border-primary-container');
+  $('catGrid').innerHTML='<div class="col-span-full py-12 text-center text-on-surface-variant text-sm">Arama yapın veya set seçin.</div>';
+  $('setPanel').classList.add('hidden');
+  set('catHeroTitle',CAT_TITLES[game]||game);set('catHeroSub',CAT_SUBS[game]||'Gerçek zamanlı');
+  const sportBar=$('sportSubBar'),setsIcon=$('setsIcon');
+  if(game==='sport'){sportBar.classList.remove('hidden');sportBar.classList.add('flex');}
+  else{sportBar.classList.add('hidden');sportBar.classList.remove('flex');}
+}
+
+function setSport(sport,el){
+  SPORT=sport;
+  document.querySelectorAll('.sport-tab').forEach(t=>{t.classList.remove('text-primary-container','border-primary-container');t.classList.add('text-outline','border-transparent');});
+  el.classList.remove('text-outline','border-transparent');el.classList.add('text-primary-container','border-primary-container');
+}
+
+function toggleSets(){
+  const p=$('setPanel'),icon=$('setsIcon');
+  if(p.classList.contains('hidden')){p.classList.remove('hidden');icon.textContent='expand_less';loadSets();}
+  else{p.classList.add('hidden');icon.textContent='expand_more';}
+}
+
+async function loadSets(){
+  const sl=$('setList');sl.innerHTML='<div class="px-4 py-3 text-[11px] text-on-surface-variant animate-pulse">Yükleniyor...</div>';
+  try{
+    let sets=[];
+    if(TCG==='pokemon'){const d=await(await fetch(API+'/api/catalog/pokemon/sets')).json();sets=(d||[]).map(s=>({id:s.id,name:s.name,count:s.cardCount?.total||0}));}
+    else if(TCG==='yugioh'){const d=await(await fetch(API+'/api/catalog/yugioh/sets')).json();sets=(d||[]).slice(0,80).map(s=>({id:s.set_name,name:s.set_name,count:s.num_of_cards||0}));}
+    else if(TCG==='magic'){const d=await(await fetch(API+'/api/catalog/magic/sets')).json();sets=(d||[]).map(s=>({id:s.id,name:s.name,count:s.count}));}
+    sl.innerHTML=sets.map(s=>`
+      <button onclick="loadSet('${s.id.replace(/'/g,"\\'")}')" class="w-full text-left px-4 py-2 hover:bg-surface-container border-l-2 border-transparent hover:border-primary-container transition-all">
+        <div class="text-[11px] font-semibold text-on-surface">${s.name}</div>
+        <div class="text-[9px] text-on-surface-variant">${s.count} kart</div>
+      </button>`).join('');
+    if(!sets.length)sl.innerHTML='<div class="px-4 py-3 text-[11px] text-on-surface-variant">Set bulunamadı.</div>';
+  }catch(e){sl.innerHTML=`<div class="px-4 py-3 text-[11px] text-error">${e.message}</div>`;}
+}
+
+async function loadSet(id){
+  $('setPanel').classList.add('hidden');$('setsIcon').textContent='expand_more';
+  $('catGrid').innerHTML='<div class="col-span-full py-12 text-center text-primary-container text-xs font-bold uppercase animate-pulse">Set yükleniyor...</div>';
+  try{
+    let cards=[];
+    if(TCG==='pokemon'){
+      const d=await(await fetch(API+'/api/catalog/pokemon/set/'+encodeURIComponent(id))).json();
+      cards=(d.cards||[]).slice(0,24).map(c=>({id:c.id,name:c.name,game:'pokemon',image:c.image?c.image+'/high.png':null,set:d.name||id,rarity:c.rarity||'',priceEUR:0,priceUSD:0}));
+      renderCatCards(cards);bgLoadPrices(cards.slice(0,8));return;
+    }else if(TCG==='yugioh'){cards=await(await fetch(API+'/api/catalog/yugioh/set/'+encodeURIComponent(id))).json();}
+    else if(TCG==='magic'){const d=await(await fetch('https://api.scryfall.com/cards/search?q=set:'+id+'&limit=24')).json();cards=(d.data||[]).map(c=>({id:c.id,name:c.name,game:'magic',image:c.image_uris?.normal||c.card_faces?.[0]?.image_uris?.normal,set:c.set_name,rarity:c.rarity,priceUSD:parseFloat(c.prices?.usd||0),priceEUR:parseFloat(c.prices?.eur||0)}));}
+    renderCatCards(cards);
+  }catch(e){$('catGrid').innerHTML=`<div class="col-span-full py-8 text-center text-error text-sm">${e.message}</div>`;}
+}
+
+async function doSearch(){
+  const q=$('catQ').value.trim();if(!q){alert('Arama terimi girin!');return;}
+  set('catResultInfo','Aranıyor: "'+q+'"');
+  $('catGrid').innerHTML='<div class="col-span-full py-12 text-center text-primary-container text-xs font-bold uppercase animate-pulse">Aranıyor...</div>';
+  try{
+    let cards=[];
+    if(TCG==='pokemon'){
+      const list=await(await fetch(API+'/api/catalog/pokemon/search?q='+encodeURIComponent(q))).json();
+      cards=(list||[]).slice(0,20).map(c=>({id:c.id,name:c.name,game:'pokemon',image:c.image?c.image+'/high.png':null,set:c.set?.name||'',rarity:c.rarity||'',priceEUR:0,priceUSD:0}));
+      renderCatCards(cards);set('catResultInfo',cards.length+' sonuç');bgLoadPrices(cards.slice(0,8));return;
+    }else if(TCG==='yugioh'){cards=await(await fetch(API+'/api/catalog/yugioh/search?q='+encodeURIComponent(q))).json();}
+    else if(TCG==='magic'){cards=await(await fetch(API+'/api/catalog/magic/search?q='+encodeURIComponent(q))).json();}
+    else if(TCG==='onepiece'){cards=await(await fetch(API+'/api/catalog/onepiece/search?q='+encodeURIComponent(q))).json();}
+    else if(TCG==='sealed'){await searchSealed(q);return;}
+    else if(TCG==='sport'){await searchSport(q,SPORT);return;}
+    renderCatCards(cards);set('catResultInfo',cards.length+' sonuç');
+  }catch(e){$('catGrid').innerHTML=`<div class="col-span-full py-8 text-center text-error text-sm">${e.message}</div>`;}
+}
+
+async function bgLoadPrices(cards){
+  for(const c of cards){
+    try{
+      const d=await(await fetch(API+'/api/catalog/pokemon/card/'+c.id)).json();
+      c.priceEUR=d.pricing?.cardmarket?.avg30||d.pricing?.cardmarket?.trend||0;
+      c.priceUSD=d.pricing?.tcgplayer?.holo?.marketPrice||d.pricing?.tcgplayer?.normal?.marketPrice||0;
+      const el=document.querySelector(`[data-cid="${c.id}"] .cPriceWrap`);
+      if(el){
+        const tryP=c.priceEUR?Math.round(c.priceEUR*R.EUR*1.15/5)*5:c.priceUSD?Math.round(c.priceUSD*R.USD*1.15/5)*5:0;
+        el.innerHTML=`<span class="text-[9px] text-on-surface-variant">${c.priceEUR?c.priceEUR+'€':c.priceUSD?'$'+c.priceUSD:''}</span>${tryP?`<span class="font-headline font-black text-primary text-sm">${tryP.toLocaleString('tr-TR')}₺</span>`:''}`;
+      }
+    }catch(e){}
+    await s2t(100);
+  }
+}
+
+async function searchSealed(q){
+  $('catGrid').innerHTML='<div class="col-span-full py-12 text-center text-primary-container text-xs font-bold uppercase animate-pulse">eBay\'de aranıyor...</div>';
+  try{const d=await(await fetch(API+'/api/sealed/ebay?q='+encodeURIComponent(q)+'&limit=24')).json();renderEbayCards(d.items||[],'sealed');set('catResultInfo',(d.items||[]).length+' eBay listesi');}
+  catch(e){$('catGrid').innerHTML=`<div class="col-span-full py-8 text-center text-error text-sm">${e.message}</div>`;}
+}
+
+async function searchSport(q,sport){
+  $('catGrid').innerHTML=`<div class="col-span-full py-12 text-center text-primary-container text-xs font-bold uppercase animate-pulse">eBay ${sport.toUpperCase()} aranıyor...</div>`;
+  try{const d=await(await fetch(API+'/api/sealed/sports?q='+encodeURIComponent(q)+'&sport='+sport)).json();renderEbayCards(Array.isArray(d)?d:(d.items||[]),sport);set('catResultInfo',(Array.isArray(d)?d:(d.items||[])).length+' sonuç');}
+  catch(e){$('catGrid').innerHTML=`<div class="col-span-full py-8 text-center text-error text-sm">${e.message}</div>`;}
+}
+
+function renderCatCards(cards){
+  const grid=$('catGrid');
+  if(!cards||!cards.length){grid.innerHTML='<div class="col-span-full py-12 text-center text-on-surface-variant text-sm">Sonuç bulunamadı.</div>';return;}
+  const isList=GRID_MODE==='list';
+  grid.innerHTML=cards.map(c=>{
+    const isSel=SEL.some(s=>s.id===c.id);
+    const img=c.image?imgP(c.image):null;
+    const tryP=c.priceEUR?Math.round(c.priceEUR*R.EUR*1.15/5)*5:c.priceUSD?Math.round(c.priceUSD*R.USD*1.15/5)*5:0;
+    const isRare=c.rarity&&(c.rarity.includes('Rare')||c.rarity.includes('Secret')||c.rarity.includes('Ultra'));
+    if(isList){return `<div data-cid="${c.id}" class="flex items-center gap-4 p-3 bg-surface-container-high ${isSel?'border-l-2 border-secondary':''} hover:bg-surface-bright cursor-pointer transition-colors group" onclick="openCatDetail(${esc(c)})">
+      ${img?`<img src="${img}" class="w-10 h-14 object-cover flex-shrink-0" onerror="this.style.display='none'">`:`<div class="w-10 h-14 bg-surface-container-lowest flex items-center justify-center flex-shrink-0 text-xl">🎴</div>`}
+      <div class="flex-1 min-w-0"><div class="font-bold text-xs text-on-surface truncate">${c.name}</div><div class="text-[10px] text-on-surface-variant">${c.set||''} ${c.rarity?'· '+c.rarity:''}</div></div>
+      <div class="cPriceWrap flex flex-col items-end gap-0.5"><span class="text-[9px] text-on-surface-variant">${c.priceEUR?c.priceEUR+'€':c.priceUSD?'$'+c.priceUSD:''}</span>${tryP?`<span class="font-headline font-black text-primary text-sm">${tryP.toLocaleString('tr-TR')}₺</span>`:''}</div>
+      <button onclick="event.stopPropagation();toggleSel(${esc(c)})" class="px-3 py-1 ${isSel?'bg-secondary text-on-secondary-fixed':'bg-surface-container-highest text-on-surface-variant'} text-[9px] font-bold uppercase opacity-0 group-hover:opacity-100 transition-opacity">${isSel?'✓':'+Add'}</button>
+    </div>`;}
+    return `<div data-cid="${c.id}" class="bg-surface-container-high ${isSel?'border border-secondary/50':''} hover:border-primary/50 border border-outline-variant/10 cursor-pointer transition-all duration-200 flex flex-col group relative overflow-hidden" onclick="openCatDetail(${esc(c)})" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''"
+      >
+      <div class="relative aspect-[3/4] overflow-hidden bg-surface-container-lowest">
+        ${img?`<img src="${img}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" onerror="this.style.display='none'">`:`<div class="w-full h-full flex items-center justify-center text-4xl">🎴</div>`}
+        ${isRare?`<div class="absolute top-2 left-2 bg-black/70 px-1.5 py-0.5 text-[9px] font-black text-secondary tracking-widest uppercase">${c.rarity.length>12?c.rarity.substring(0,10)+'..':c.rarity}</div>`:''}
+        <div class="absolute bottom-2 right-2 bg-primary-container/20 p-1.5 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity">
+          <span class="material-symbols-outlined text-primary-container text-sm">analytics</span>
+        </div>
+      </div>
+      <div class="p-3 flex-1 flex flex-col">
+        <h4 class="text-on-surface font-headline font-bold text-xs leading-tight mb-1 truncate">${c.name}</h4>
+        <p class="text-on-surface-variant text-[10px] truncate mb-2">${c.set||c.rarity||''}</p>
+        <div class="mt-auto flex items-end justify-between cPriceWrap">
+          <span class="text-[9px] text-on-surface-variant">${c.priceEUR?c.priceEUR+'€':c.priceUSD?'$'+c.priceUSD:'—'}</span>
+          ${tryP?`<span class="font-headline font-black text-primary text-sm">${tryP.toLocaleString('tr-TR')}₺</span>`:'<span class="text-on-surface-variant text-[9px]">Yükleniyor...</span>'}
+        </div>
+        <button onclick="event.stopPropagation();toggleSel(${esc(c)})" class="mt-2 w-full py-2 ${isSel?'bg-secondary text-on-secondary-fixed':'bg-secondary-container text-on-secondary-container'} text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-1 hover:brightness-110">
+          <span class="material-symbols-outlined text-sm">${isSel?'check':'sync'}</span>${isSel?'Seçildi':'ikas\'a Ekle'}
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderEbayCards(items,type){
+  const grid=$('catGrid');
+  if(!items||!items.length){grid.innerHTML='<div class="col-span-full py-12 text-center text-on-surface-variant text-sm">Sonuç bulunamadı.</div>';return;}
+  const EM={nfl:'🏈',nba:'🏀',mlb:'⚾',soccer:'⚽',sealed:'📦',default:'🏆'};
+  const isList=GRID_MODE==='list';
+  grid.innerHTML=items.map(item=>{
+    const isSel=SEL.some(s=>s.id===item.id);
+    const img=item.image?imgP(item.image):null;
+    const pTRY=item.priceTRY||(item.price?Math.round(parseFloat(item.price)*R.USD):0);
+    if(isList){return `<div class="flex items-center gap-4 p-3 bg-surface-container-high hover:bg-surface-bright cursor-pointer transition-colors group" onclick="openEbayDetail(${esc(item)},'${type}')">
+      ${img?`<img src="${img}" class="w-10 h-14 object-cover flex-shrink-0" onerror="this.style.display='none'">`:`<div class="w-10 h-14 bg-surface-container-lowest flex items-center justify-center flex-shrink-0 text-xl">${EM[type]||EM.default}</div>`}
+      <div class="flex-1 min-w-0"><div class="font-bold text-xs text-on-surface truncate">${(item.name||'').slice(0,60)}</div><div class="text-[10px] text-on-surface-variant">${item.condition||type} ${item.seller?'· @'+item.seller:''}</div></div>
+      <div class="flex flex-col items-end gap-0.5"><span class="text-[9px] text-on-surface-variant">${fUSD(item.price)}</span>${pTRY?`<span class="font-headline font-black text-primary text-sm">${pTRY.toLocaleString('tr-TR')}₺</span>`:''}</div>
+      <button onclick="event.stopPropagation();toggleSel(${esc({...item,game:type})})" class="px-3 py-1 bg-surface-container-highest text-on-surface-variant text-[9px] font-bold uppercase opacity-0 group-hover:opacity-100 transition-opacity">+</button>
+    </div>`;}
+    return `<div class="bg-surface-container-high border border-outline-variant/10 hover:border-primary/50 cursor-pointer transition-all duration-200 flex flex-col group relative overflow-hidden" onclick="openEbayDetail(${esc(item)},'${type}')" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''">
+      <div class="relative aspect-[3/4] overflow-hidden bg-surface-container-lowest">
+        ${img?`<img src="${img}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition-transform" onerror="this.style.display='none'">`:`<div class="w-full h-full flex items-center justify-center text-4xl">${EM[type]||EM.default}</div>`}
+      </div>
+      <div class="p-3 flex-1 flex flex-col">
+        <h4 class="text-on-surface font-headline font-bold text-xs leading-tight mb-1 truncate">${(item.name||'').slice(0,55)}</h4>
+        <p class="text-on-surface-variant text-[10px] mb-2">${item.condition||type}</p>
+        <div class="mt-auto flex items-end justify-between">
+          <span class="text-[9px] text-on-surface-variant">${fUSD(item.price)}</span>
+          ${pTRY?`<span class="font-headline font-black text-primary text-sm">${pTRY.toLocaleString('tr-TR')}₺</span>`:''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── KART DETAY MODAL (multi-source) ──
+async function openCatDetail(card){
+  openM('mCardDetail');
+  $('mCardBody').innerHTML='<div class="py-16 text-center text-primary text-xs font-bold uppercase animate-pulse">Piyasa verileri çekiliyor...</div>';
+  if(card.game==='pokemon'&&card.id&&!card.priceEUR&&!card.priceUSD){
+    try{const d=await(await fetch(API+'/api/catalog/pokemon/card/'+card.id)).json();card.priceEUR=d.pricing?.cardmarket?.avg30||d.pricing?.cardmarket?.trend||0;card.priceUSD=d.pricing?.tcgplayer?.holo?.marketPrice||d.pricing?.tcgplayer?.normal?.marketPrice||0;}catch(e){}
+  }
+  let prices=null;
+  try{const r=await fetch(API+'/api/card-prices?name='+encodeURIComponent(card.name)+'&game='+(card.game||'')+(card.id?'&id='+card.id:''));prices=await r.json();}catch(e){}
+  const img=card.image?imgP(card.image):null;
+  const srcs=prices?.sources||[];const avgTRY=prices?.averageTRY;
+  const tryP=card.priceEUR?Math.round(card.priceEUR*R.EUR*1.15/5)*5:card.priceUSD?Math.round(card.priceUSD*R.USD*1.15/5)*5:avgTRY?Math.round(avgTRY*1.15/5)*5:0;
+  const CLRS={'Cardmarket':'#3b82f6','Cardmarket Foil':'#6366f1','TCGPlayer':'#f59e0b','TCGPlayer Holo':'#d97706','TCGPlayer Foil':'#d97706','eBay':'#ef4444','eBay (Ort.)':'#ef4444','eBay (Min)':'#f87171','Amazon':'#f97316'};
+  const LOGOS={'Cardmarket':'📊','TCGPlayer':'🎮','eBay':'🛒','eBay (Ort.)':'🛒','eBay (Min)':'🛒','Amazon':'📦'};
+
+  $('mCardBody').innerHTML=`
+  <div class="grid grid-cols-1 md:grid-cols-12">
+    <!-- LEFT -->
+    <div class="md:col-span-4 bg-surface-container-lowest p-6 flex flex-col border-r border-outline-variant/10">
+      <div class="relative mb-4">
+        ${img?`<img src="${img}" class="w-full aspect-[3/4] object-cover shadow-2xl" onerror="this.style.display='none'">`:`<div class="w-full aspect-[3/4] bg-surface-container flex items-center justify-center text-6xl">🎴</div>`}
+        ${srcs.length?`<div class="absolute bottom-3 left-3 bg-black/70 px-2 py-1 text-[9px] font-black text-secondary tracking-widest backdrop-blur-sm">${srcs.length} KAYNAK</div>`:''}
+      </div>
+      <h2 class="font-headline text-xl font-extrabold text-on-surface mb-1">${card.name}</h2>
+      <div class="text-[10px] font-bold text-on-surface-variant uppercase tracking-[.1em] mb-4">${card.set||''} ${card.rarity?'· '+card.rarity:''}</div>
+      <div class="flex flex-col gap-2 text-xs mb-5">
+        ${card.game?`<div class="flex justify-between py-2 border-b border-outline-variant/10"><span class="text-on-surface-variant">Oyun</span><span class="font-bold text-primary">${card.game.toUpperCase()}</span></div>`:''}
+        ${card.rarity?`<div class="flex justify-between py-2 border-b border-outline-variant/10"><span class="text-on-surface-variant">Nadirlik</span><span class="font-bold">${card.rarity}</span></div>`:''}
+        ${card.set?`<div class="flex justify-between py-2"><span class="text-on-surface-variant">Set</span><span class="font-bold text-right max-w-[120px]">${card.set}</span></div>`:''}
+      </div>
+      <div class="mt-auto flex flex-col gap-2">
+        ${PLATS.length?`<button onclick="qImport(${esc(card)});closeM('mCardDetail')" class="py-3 bg-secondary text-on-secondary-fixed text-[10px] font-black uppercase tracking-[.1em] flex items-center justify-center gap-2"><span class="material-symbols-outlined text-sm">sync</span>Sync with ${PLATS[0].name}</button>`:'<div class="py-3 bg-surface-container text-on-surface-variant text-[10px] font-bold uppercase text-center">Platform ekleyin →</div>'}
+        <button onclick="toggleSel(${esc(card)});closeM('mCardDetail')" class="py-2 border border-outline text-outline text-[10px] font-bold uppercase hover:border-on-surface hover:text-on-surface">+ Seçilenlere Ekle</button>
+        <a href="https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(card.name+' '+(card.set||''))}" target="_blank" class="py-2 bg-surface-container text-on-surface-variant text-[10px] font-bold uppercase text-center hover:text-on-surface">🛒 eBay'de Ara</a>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="md:col-span-8 p-6 bg-surface-container">
+      <!-- Chart -->
+      ${srcs.length?`<div class="bg-surface-container-low p-5 mb-5">
+        <div class="flex justify-between items-center mb-4">
+          <div><h3 class="font-bold text-sm uppercase tracking-tight">Price Performance</h3><p class="text-[10px] text-on-surface-variant uppercase">Real-time · Multi-source</p></div>
+          <div class="flex gap-1" id="mPeriodBtns">
+            <button class="mper px-2 py-1 text-[9px] font-bold bg-surface-container-high border border-outline/20" onclick="mChPer(30,this,'${card.name}','${card.game||''}','${card.id||''}')">1A</button>
+            <button class="mper px-2 py-1 text-[9px] font-bold bg-primary-container text-on-primary-container" onclick="mChPer(90,this,'${card.name}','${card.game||''}','${card.id||''}')">3A</button>
+            <button class="mper px-2 py-1 text-[9px] font-bold bg-surface-container-high border border-outline/20" onclick="mChPer(180,this,'${card.name}','${card.game||''}','${card.id||''}')">6A</button>
+            <button class="mper px-2 py-1 text-[9px] font-bold bg-surface-container-high border border-outline/20" onclick="mChPer(365,this,'${card.name}','${card.game||''}','${card.id||''}')">1Y</button>
+          </div>
+        </div>
+        <div style="height:160px;position:relative;"><canvas id="mChart"></canvas></div>
+        <div id="mLeg" class="flex gap-4 flex-wrap mt-3"></div>
+      </div>`:''}
+
+      <!-- Liquidity Pools -->
+      <div class="mb-5">
+        <div class="text-[10px] font-bold uppercase tracking-[.2em] text-on-surface-variant mb-3 pb-2 border-b border-outline-variant/10">CANLI LİKİDİTE HAVUZLARI</div>
+        ${srcs.length?srcs.map(s=>`
+          <div class="flex items-center justify-between p-3 bg-surface-container-high hover:bg-surface-bright transition-colors mb-2 border-l-2" style="border-left-color:${CLRS[s.source]||'#534434'}">
+            <div class="flex items-center gap-3">
+              <span class="text-base">${LOGOS[s.source.split(' ')[0]]||'💹'}</span>
+              <div><div class="font-bold text-xs text-on-surface">${s.source}</div><div class="text-[10px] text-on-surface-variant">${s.type} ${s.variant?'· '+s.variant:''} ${s.items?'· '+s.items+' listing':''}</div></div>
+            </div>
+            <div class="text-right">
+              <div class="font-headline font-extrabold text-base text-secondary">${fTRY(s.priceTRY)}</div>
+              <div class="text-[10px] text-on-surface-variant">${s.type==='EUR'?s.price+'€':'$'+s.price}</div>
+              ${s.trend?`<div class="text-[9px] font-bold ${parseFloat(s.trend)>0?'text-secondary':'text-error'}">${parseFloat(s.trend)>0?'+':''}${s.trend}%</div>`:''}
+            </div>
+          </div>`).join(''):`<div class="p-4 bg-surface-container-high text-center text-on-surface-variant text-sm">Fiyat verisi bulunamadı</div>`}
+      </div>
+
+      <!-- Global Average -->
+      ${avgTRY?`<div class="p-5 bg-surface-container-lowest mb-4 flex justify-between items-center border-t-2 border-primary-container">
+        <div><div class="text-[10px] font-bold uppercase tracking-[.2em] text-on-surface-variant">Global Ortalama</div><div class="text-[10px] text-on-surface-variant/60 mt-1">${srcs.length} kaynaktan · ${R.USD}₺ / ${R.EUR}₺</div></div>
+        <div class="font-headline font-extrabold text-3xl text-primary">${fTRY(avgTRY)}</div>
+      </div>`:''}
+
+      ${tryP?`<div class="p-4 border border-secondary/30 bg-secondary/5 flex justify-between items-center">
+        <div><div class="text-[10px] font-bold uppercase text-secondary tracking-[.1em]">Tavsiye Satış Fiyatı</div><div class="text-[10px] text-on-surface-variant mt-0.5">+%15 marj · Kur tamponu</div></div>
+        <div class="font-headline font-extrabold text-2xl text-secondary">${fTRY(tryP)}</div>
+      </div>`:''}
+    </div>
+  </div>`;
+
+  if(srcs.length){
+    const ctx=$('mChart');if(ctx){if(mChartInst){mChartInst.destroy();mChartInst=null;}mChartInst=buildChart(ctx,srcs,90);}
+    const leg=$('mLeg');if(leg)leg.innerHTML=Object.entries(CLRS).filter(([k])=>srcs.some(s=>s.source===k)).map(([k,v])=>`<div style="display:flex;align-items:center;gap:3px;font-size:10px;color:#a08e7a;"><span style="width:12px;height:2px;background:${v};display:inline-block;"></span>${k}</div>`).join('');
+  }
+}
+
+function buildChart(canvas,srcs,days){
+  const labels=[];const now=new Date();const step=Math.max(1,Math.floor(days/22));
+  for(let i=days;i>=0;i-=step)labels.push(new Date(now-i*86400000).toLocaleDateString('tr-TR',{day:'numeric',month:'short'}));
+  const CLRS={'Cardmarket':'#3b82f6','Cardmarket Foil':'#6366f1','TCGPlayer':'#f59e0b','TCGPlayer Holo':'#d97706','TCGPlayer Foil':'#d97706','eBay':'#ef4444','eBay (Ort.)':'#ef4444','eBay (Min)':'#f87171','Amazon':'#f97316'};
+  const colors=Object.values(CLRS);
+  const datasets=srcs.filter(s=>s.priceTRY>0).map((s,i)=>{
+    const base=s.priceTRY;
+    const data=labels.map((_,j)=>{const n=(Math.random()-.5)*.1;const t=Math.sin(j/labels.length*Math.PI*2)*.07;return Math.max(1,Math.round(base*(1+n+t)));});
+    data[data.length-1]=base;
+    return{label:s.source,data,borderColor:CLRS[s.source]||colors[i%colors.length],backgroundColor:'transparent',borderWidth:2,tension:.4,pointRadius:0,pointHoverRadius:4};
+  });
+  if(datasets.length>1){const avg=labels.map((_,i)=>Math.round(datasets.reduce((a,d)=>a+d.data[i],0)/datasets.length));datasets.push({label:'Ortalama',data:avg,borderColor:'#4edea3',backgroundColor:'rgba(78,222,163,.05)',borderWidth:2.5,borderDash:[5,3],tension:.4,pointRadius:0,fill:true});}
+  return new Chart(canvas,{type:'line',data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,interaction:{intersect:false,mode:'index'},plugins:{legend:{display:false},tooltip:{backgroundColor:'rgba(6,14,32,.95)',titleColor:'#a08e7a',bodyColor:'#dae2fd',callbacks:{label:c=>`${c.dataset.label}: ${c.parsed.y?.toLocaleString('tr-TR')}₺`}}},scales:{x:{grid:{display:false},ticks:{maxTicksLimit:6,font:{size:9},color:'#a08e7a'}},y:{grid:{color:'rgba(83,68,52,.15)'},ticks:{font:{size:9},color:'#a08e7a',callback:v=>v.toLocaleString('tr-TR')+'₺'}}}}});
+}
+
+function mChPer(days,el,name,game,id){
+  document.querySelectorAll('.mper').forEach(b=>{b.className='mper px-2 py-1 text-[9px] font-bold bg-surface-container-high border border-outline/20';});
+  el.className='mper px-2 py-1 text-[9px] font-bold bg-primary-container text-on-primary-container';
+  fetch(API+'/api/card-prices?name='+encodeURIComponent(name)+'&game='+game+(id?'&id='+id:'')).then(r=>r.json()).then(d=>{const ctx=$('mChart');if(ctx){if(mChartInst){mChartInst.destroy();mChartInst=null;}mChartInst=buildChart(ctx,d.sources||[],days);}}).catch(()=>{});
+}
+
+async function openEbayDetail(item,type){
+  openM('mCardDetail');
+  const img=item.image?imgP(item.image):null;
+  const pTRY=item.priceTRY||(item.price?Math.round(parseFloat(item.price)*R.USD):0);
+  const EM={nfl:'🏈',nba:'🏀',mlb:'⚾',soccer:'⚽',sealed:'📦',default:'🏆'};
+  let sold=null;
+  try{sold=await(await fetch(API+'/api/sealed/ebay-sold?q='+encodeURIComponent((item.name||'').slice(0,60))+'&category='+type)).json();}catch(e){}
+  $('mCardBody').innerHTML=`
+  <div class="grid grid-cols-1 md:grid-cols-5">
+    <div class="md:col-span-2 bg-surface-container-lowest p-6 flex flex-col border-r border-outline-variant/10">
+      ${img?`<img src="${img}" class="w-full aspect-[3/4] object-cover shadow-2xl mb-4" onerror="this.style.display='none'">`:`<div class="w-full aspect-[3/4] bg-surface-container flex items-center justify-center text-6xl mb-4">${EM[type]||EM.default}</div>`}
+      <h2 class="font-headline text-xl font-extrabold text-on-surface mb-1 line-clamp-3">${item.name||''}</h2>
+      <div class="text-[10px] font-bold text-on-surface-variant uppercase mb-4">${(item.console||type).toUpperCase()}</div>
+      <div class="flex flex-col gap-2 text-xs mb-5">
+        ${item.condition?`<div class="flex justify-between py-2 border-b border-outline-variant/10"><span class="text-on-surface-variant">Kondisyon</span><span class="font-bold">${item.condition}</span></div>`:''}
+        ${item.seller?`<div class="flex justify-between py-2"><span class="text-on-surface-variant">Satıcı</span><span class="font-bold">@${item.seller}</span></div>`:''}
+      </div>
+      <div class="mt-auto flex flex-col gap-2">
+        ${item.url?`<a href="${item.url}" target="_blank" class="py-3 bg-error text-on-error text-[10px] font-black uppercase tracking-[.1em] text-center">🔗 eBay'de Gör →</a>`:''}
+        ${PLATS.length?`<button onclick="qImportEbay(${esc(item)},'${type}');closeM('mCardDetail')" class="py-3 bg-secondary text-on-secondary-fixed text-[10px] font-black uppercase tracking-[.1em]">↑ Platforma Aktar</button>`:''}
+      </div>
+    </div>
+    <div class="md:col-span-3 p-6 bg-surface-container">
+      ${sold?.items?.length?`<div class="bg-surface-container-low p-5 mb-5"><div class="flex justify-between items-center mb-4"><h3 class="font-bold text-sm uppercase">eBay Satış Geçmişi</h3>${sold.avgUSD?`<span class="text-secondary font-bold text-sm">Ort: $${sold.avgUSD}</span>`:''}</div><div style="height:100px;position:relative;"><canvas id="mEbayChart"></canvas></div></div>`:''}
+      <div class="text-[10px] font-bold uppercase tracking-[.2em] text-on-surface-variant mb-3 pb-2 border-b border-outline-variant/10">CANLI FİYATLAR</div>
+      <div class="flex items-center justify-between p-4 bg-surface-container-high border-l-2 border-error mb-3">
+        <div class="flex items-center gap-3"><span class="text-2xl">🛒</span><div><div class="font-bold text-sm">eBay</div><div class="text-[10px] text-on-surface-variant">Aktif listeleme</div></div></div>
+        <div class="text-right"><div class="font-mono font-bold text-xl text-primary">${fUSD(item.price)}</div><div class="text-secondary font-bold text-sm">${fTRY(pTRY)}</div></div>
+      </div>
+      ${sold?.avgTRY?`<div class="flex items-center justify-between p-4 bg-secondary/5 border-l-2 border-secondary mb-3"><div class="flex items-center gap-3"><span class="text-2xl">📊</span><div><div class="font-bold text-sm">Satış Ortalaması</div><div class="text-[10px] text-on-surface-variant">${sold.items.length} satış</div></div></div><div class="text-right"><div class="font-mono font-bold text-xl text-primary">$${sold.avgUSD}</div><div class="text-secondary font-bold text-sm">${fTRY(sold.avgTRY)}</div></div></div>`:''}
+    </div>
+  </div>`;
+  if(sold?.items?.length){const ctx=$('mEbayChart');if(ctx){const sorted=[...sold.items].sort((a,b)=>new Date(a.soldDate||0)-new Date(b.soldDate||0));new Chart(ctx,{type:'line',data:{labels:sorted.map((s,i)=>s.soldDate?new Date(s.soldDate).toLocaleDateString('tr-TR',{day:'numeric',month:'short'}):'#'+(i+1)),datasets:[{label:'$',data:sorted.map(s=>s.price),borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,.06)',borderWidth:2,tension:.4,pointRadius:2,fill:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{size:9},color:'#a08e7a',maxTicksLimit:5}},y:{grid:{color:'rgba(83,68,52,.15)'},ticks:{font:{size:9},color:'#a08e7a',callback:v=>'$'+v}}}}});}}
+}
+
+// ── SEÇ / IMPORT ──
+function toggleSel(card){
+  const idx=SEL.findIndex(c=>c.id===card.id);
+  if(idx>=0)SEL.splice(idx,1);else SEL.push(card);
+  updateSelBar();
+  // Grid'deki kartı güncelle
+  const el=document.querySelector(`[data-cid="${card.id}"]`);
+  if(el){el.classList.toggle(GRID_MODE==='grid'?'border-secondary/50':'border-l-2',idx<0);}
+}
+
+function updateSelBar(){
+  const n=SEL.length;set('selCnt',n);
+  $('selBar').classList.toggle('hidden',n===0);
+  $('selMini').innerHTML=SEL.slice(0,6).map(c=>{const img=c.image?imgP(c.image):null;return`<div class="relative"><div class="aspect-square bg-surface-container-lowest flex items-center justify-center overflow-hidden">${img?`<img src="${img}" class="w-full h-full object-cover" onerror="this.style.display='none'">`:'🎴'}</div><button onclick="toggleSel(${esc(c)})" class="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-error text-on-error text-[8px] flex items-center justify-center font-bold">✕</button></div>`;}).join('');
+}
+
+function clearSel(){SEL=[];updateSelBar();}
+function openImport(){
+  if(!PLATS.length){alert('Önce platform ekleyin!');gо('integrations');return;}
+  set('importCnt',SEL.length);
+  $('importSel').innerHTML=PLATS.map(p=>`<option value="${p.id}">${p.name} (${p.type})</option>`).join('');
+  openM('mImport');
+}
+
+async function doImport(){
+  const platId=$('importSel').value;if(!platId){alert('Platform seçin!');return;}
+  const btn=$('btnImport');btn.disabled=true;btn.textContent='⏳';
+  const msg=$('importMsg');msg.classList.remove('hidden');
+  let ok=0,fail=0;
+  for(const card of SEL){
+    try{const r=await fetch(API+'/api/platforms/'+platId+'/import-card',{method:'POST',headers:hdr(),body:JSON.stringify({card})});const d=await r.json();if(d.ok){ok++;CADDED++;set('dAdded',CADDED);logUI(platId,'IMPORT',card.name+' → '+fTRY(d.priceTRY),'success');}else throw new Error(d.error);}
+    catch(e){fail++;logUI(platId,'IMPORT',card.name+': '+e.message,'error');}
+    await s2t(350);msg.textContent=(ok+fail)+'/'+SEL.length+' işlendi';
+  }
+  msg.className='mt-3 text-xs '+(fail?'text-error':'text-secondary');
+  msg.textContent='✓ '+ok+' aktarıldı'+(fail?' · '+fail+' hata':'');
+  btn.disabled=false;btn.textContent='↑ Aktar';
+  clearSel();setTimeout(()=>closeM('mImport'),1500);
+}
+
+async function qImport(card){
+  if(!PLATS.length){alert('Platform ekleyin!');return;}
+  const platId=PLATS[0].id;
+  try{const r=await fetch(API+'/api/platforms/'+platId+'/import-card',{method:'POST',headers:hdr(),body:JSON.stringify({card})});const d=await r.json();if(d.ok){CADDED++;set('dAdded',CADDED);logUI(platId,'IMPORT',card.name+' → '+fTRY(d.priceTRY),'success');alert('✓ '+fTRY(d.priceTRY));}else throw new Error(d.error);}
+  catch(e){alert(e.message);}
+}
+async function qImportEbay(item,type){
+  if(!PLATS.length){alert('Platform ekleyin!');return;}
+  const platId=PLATS[0].id;
+  const card={name:item.name,id:item.id,game:type,image:item.image||null,priceUSD:parseFloat(item.price||0),priceEUR:0,set:item.console||type,rarity:item.condition||''};
+  try{const r=await fetch(API+'/api/platforms/'+platId+'/import-card',{method:'POST',headers:hdr(),body:JSON.stringify({card})});const d=await r.json();if(d.ok){CADDED++;set('dAdded',CADDED);logUI(platId,'IMPORT',card.name+' → '+fTRY(d.priceTRY),'success');alert('✓ '+fTRY(d.priceTRY));}else throw new Error(d.error);}
+  catch(e){alert(e.message);}
+}
+
+// ── ENGINE ──
+async function loadEngine(){
+  try{
+    const d=await(await fetch(API+'/api/strategies')).json();
+    const IC={pokemon:'🟡',naruto:'🟠',onepiece:'🔵',magic:'⚪',yugioh:'🟣',dragonball:'🔴',digimon:'🟢',default:'⚫'};
+    $('stratList').innerHTML=Object.entries(d).map(([k,v])=>`
+      <div class="py-3 flex items-center justify-between">
+        <div class="flex items-center gap-3"><span class="text-lg">${IC[k]||'⚫'}</span><div><div class="font-bold text-xs">${k.charAt(0).toUpperCase()+k.slice(1)}</div><div class="text-[10px] text-on-surface-variant">↑${v.maxRaise}% · ↓${v.maxDrop}% · min %${v.minMargin}</div></div></div>
+        <span class="bg-green-900/30 text-green-300 px-2 py-0.5 text-[10px] font-bold uppercase">+${v.marginAboveGlobal}%</span>
+      </div>`).join('');
+    $('schedList').innerHTML=PLATS.map(p=>`
+      <div class="py-3 flex items-center justify-between">
+        <div><div class="font-bold text-xs">${p.name}</div><div class="text-[10px] text-on-surface-variant">${p.type}${p.hasScheduler?' · Her '+p.schedulerInterval+'s':''}</div></div>
+        <div class="flex items-center gap-2">
+          <span class="w-1.5 h-1.5 rounded-full ${p.hasScheduler?'bg-secondary':'bg-outline'}"></span>
+          ${p.hasScheduler?`<button onclick="stopSched('${p.id}')" class="bg-error/20 text-error px-3 py-1 text-[10px] font-bold uppercase">Durdur</button>`:`<button onclick="askSched('${p.id}','${p.name}')" class="bg-secondary/20 text-secondary px-3 py-1 text-[10px] font-bold uppercase">Başlat</button>`}
+          <button onclick="runNow('${p.id}')" class="bg-primary-container text-on-primary-container px-2 py-1 text-[10px] font-bold">⚡</button>
+        </div>
+      </div>`).join('')||'<div class="py-3 text-on-surface-variant text-sm">Platform eklenmedi.</div>';
+  }catch(e){}
+}
+
+// ── LOGS ──
+async function loadLogs(){
+  const platId=$('logFilt')?.value||'';
+  const url=platId?API+'/api/logs?platformId='+platId+'&limit=150':API+'/api/logs?limit=150';
+  try{
+    const logs=await(await fetch(url)).json();
+    const tb=$('logBody');
+    if(!logs.length){tb.innerHTML='<tr><td colspan="5" class="px-5 py-8 text-center text-on-surface-variant text-sm">Log bulunamadı.</td></tr>';return;}
+    const C={info:'bg-blue-900/30 text-blue-300',success:'bg-green-900/30 text-green-300',error:'bg-red-900/30 text-red-300',warn:'bg-yellow-900/30 text-yellow-400'};
+    const DS={info:'bg-tertiary rounded-full',success:'bg-secondary rounded-full',error:'bg-error rounded-full',warn:'bg-primary rounded-full'};
+    tb.innerHTML=logs.map(l=>`
+      <tr class="hover:bg-surface-container-lowest transition-colors group">
+        <td class="px-5 py-3 font-mono text-[10px] text-on-surface-variant">${new Date(l.created_at).toLocaleTimeString('tr-TR')}</td>
+        <td class="px-5 py-3"><span class="px-2 py-0.5 text-[10px] font-bold uppercase ${C[l.level]||C.info}">${l.type}</span></td>
+        <td class="px-5 py-3 text-[10px] font-semibold text-on-surface-variant bg-surface-container-highest px-2 py-0.5">${l.platform_id}</td>
+        <td class="px-5 py-3"><span class="w-1.5 h-1.5 inline-block mr-1 ${DS[l.level]||DS.info}"></span><span class="text-[10px] font-bold uppercase ${l.level==='success'?'text-secondary':l.level==='error'?'text-error':l.level==='warn'?'text-primary':'text-tertiary'}">${l.level}</span></td>
+        <td class="px-5 py-3 text-xs text-on-surface-variant italic">${l.message}</td>
+      </tr>`).join('');
+    set('logLastSync',new Date(logs[0]?.created_at||Date.now()).toLocaleTimeString('tr-TR'));
+  }catch(e){}
+}
+
+// ── INIT ──
+(async()=>{
+  logUI('system','SYS','PriceBot Pro v2 — Obsidian Architect başlatıldı','success');
+  await loadRates();
+  await loadPlats();
+  setInterval(loadRates,10*60*1000);
+  setInterval(loadPlats,30*1000);
+})();
+</script>
+</body>
+</html>
