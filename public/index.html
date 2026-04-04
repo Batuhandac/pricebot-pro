@@ -462,18 +462,25 @@ function trackerModelKeyFromName(name='',query=''){
     'stanley','termos','termosu','vacuum','vakumlu','mug','cup','tumbler','bardak','matara',
     'drinkware','taşı','tasi','taşi','tasima','taşıma','resmi','orijinal','çelik','pipetli','with','ve',
     'amazon','amazoncomtr','trendyol','hepsiburada','a101','teknosa','n11','cimri','akakce',
-    'turkiye','türkiye','official','store','satis','satış','sale'
+    'turkiye','türkiye','official','store','satis','satış','sale','litre','ml'
   ]);
   s=s.normalize('NFKD').replace(/[\u0300-\u036f]/g,'');
   s=s.replace(/[^a-z0-9çğıöşü\s.-]/g,' ');
   s=s.replace(/\b\d+(?:[.,]\d+)?\s?(ml|l|lt|litre|oz|gb|tb|cm|mm|w)\b/g,' ');
-  let tokens=s.split(/\s+/).filter(Boolean).filter(t=>t.length>1 && !removable.has(t) && !qTokens.includes(t));
-  const priority=['quencher','aerolight','transit','flowstate','classic','klasik','protour','flip','carry','all','day'];
+  
+  const allTokens = s.split(/\s+/).filter(Boolean);
+  let tokens=allTokens.filter(t=>t.length>1 && !removable.has(t));
+  
+  const priority=['quencher','aerolight','transit','flowstate','classic','klasik','protour','flip','carry','all','day','adventure','trigger','action','master'];
   const picked=[];
   for(const k of priority){ if(tokens.includes(k) && !picked.includes(k)) picked.push(k); }
-  for(const t of tokens){ if(!picked.includes(t)) picked.push(t); if(picked.length>=4) break; }
+  
+  if (picked.length === 0) {
+    for(const t of tokens){ if(!picked.includes(t)) picked.push(t); if(picked.length>=2) break; }
+  }
+  
   const key=picked.join(' ').trim();
-  return key || String(name||'').toLowerCase().replace(/\s+/g,' ').trim();
+  return key || "Diğer Modeller";
 }
 function groupTrackerSearchResults(results=[],query=''){
   const map=new Map();
@@ -902,11 +909,12 @@ function prefillTracker(name,price,searchQuery){
   openM('mTrackerAdd');
 }
 
-async function createTrackedPlatformProduct(id){
+async function createTrackedPlatformProduct(id, platformId=null){
   try{
-    const r=await(await fetch(API+'/api/tracker/products/'+id+'/create-platform-product',{method:'POST',headers:hdr(),body:'{}'})).json();
+    const bodyArgs = platformId ? { platformId } : {};
+    const r=await(await fetch(API+'/api/tracker/products/'+id+'/create-platform-product',{method:'POST',headers:hdr(),body:JSON.stringify(bodyArgs)})).json();
     if(r.error)throw new Error(r.error);
-    alert('Platform ürünü oluşturuldu. Bundan sonra fiyat push yapılabilir.');
+    alert('Platform ürünü oluşturuldu ve bağlandı. Bundan sonra anlık fiyat güncellemesi yapılabilir.');
     loadTrackedProducts();
     openTrackerDetail(id);
   }catch(e){alert('Oluşturma hatası: '+e.message);}
@@ -977,6 +985,13 @@ async function openTrackerDetail(id){
     const searchQ=p.search_query||p.searchQuery||p.name;
     const isBelow=lowestComp&&ourPrice&&lowestComp<ourPrice;
     
+    const hasPlatformLink = !!(p.platform_id || p.platformId);
+    const hasCreatedPlatformProduct = !!(p.platform_product_id || p.platformProductId);
+    const ptNameObj = hasPlatformLink ? PLATS.find(x => x.id === (p.platform_id || p.platformId)) : null;
+    const platformName = ptNameObj ? ptNameObj.name : 'Platform';
+    const activeIkas = findFirstPlatformByType('ikas');
+    const activeShopify = findFirstPlatformByType('shopify');
+    
     $('mTrackerBody').innerHTML=`
     <div class="p-6 border-b border-outline-variant/10">
       <h2 class="font-headline text-2xl font-extrabold text-on-surface mb-1">${p.name}</h2>
@@ -1020,10 +1035,11 @@ async function openTrackerDetail(id){
           <div><span class="text-on-surface-variant">Max Düşüş:</span> <strong>%${p.rules?.maxDropPercent||30}</strong></div>
         </div>
       </div>
-      <div class="flex gap-3">
-        ${hasPlatformLink && !hasCreatedPlatformProduct ? `<button onclick="createTrackedPlatformProduct('${p.id}')" class="flex-1 py-3 bg-[#95bf47] text-[#0d1b05] text-xs font-bold uppercase">+ ${platformName} içinde ürün oluştur</button>` : ''}
-        ${hasPlatformLink && hasCreatedPlatformProduct && suggested ? `<button onclick="pushTrackedPrice('${p.id}',${suggested})" class="flex-1 py-3 bg-secondary text-on-secondary-fixed text-xs font-bold uppercase">↑ Platforma Gönder (${fTRY(suggested)})</button>` : ''}
-        ${!hasPlatformLink ? `<button onclick="closeM('mTrackerDetail');openM('mTrackerAdd')" class="flex-1 py-3 bg-surface-container text-on-surface text-xs font-bold uppercase">Önce platform bağla</button>` : ''}
+      <div class="flex flex-wrap gap-3">
+        ${!hasCreatedPlatformProduct && activeIkas ? `<button onclick="createTrackedPlatformProduct('${p.id}', '${activeIkas.id}')" class="flex-1 py-3 bg-[#00cfb4] text-[#06231f] text-xs font-bold uppercase whitespace-nowrap">+ ikas'a aktar/oluştur</button>` : ''}
+        ${!hasCreatedPlatformProduct && activeShopify ? `<button onclick="createTrackedPlatformProduct('${p.id}', '${activeShopify.id}')" class="flex-1 py-3 bg-[#95bf47] text-[#0d1b05] text-xs font-bold uppercase whitespace-nowrap">+ Shopify'a aktar/oluştur</button>` : ''}
+        ${hasPlatformLink && hasCreatedPlatformProduct && suggested ? `<button onclick="pushTrackedPrice('${p.id}',${suggested})" class="flex-1 py-3 bg-secondary text-on-secondary-fixed text-xs font-bold uppercase whitespace-nowrap">↑ Fiyat Gönder (${fTRY(suggested)})</button>` : ''}
+        ${!hasPlatformLink && !activeIkas && !activeShopify ? `<button onclick="closeM('mTrackerDetail');openM('mAddPlat')" class="flex-1 py-3 bg-surface-container text-on-surface text-[10px] font-bold uppercase whitespace-nowrap">Platform Ekle</button>` : ''}
         <button onclick="deleteTracked('${p.id}');closeM('mTrackerDetail')" class="px-4 py-3 border border-error text-error text-xs font-bold uppercase">Sil</button>
       </div>
     </div>`;

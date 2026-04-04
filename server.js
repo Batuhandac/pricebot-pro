@@ -104,6 +104,38 @@ const db = {
   saveTrackedProduct: (p) => { const i = DB.trackedProducts.findIndex(x => x.id === p.id); if(i>=0) DB.trackedProducts[i]=p; else DB.trackedProducts.push(p); saveDB(DB); },
   deleteTrackedProduct: (id) => { DB.trackedProducts = DB.trackedProducts.filter(p => p.id !== id); saveDB(DB); }
 };
+
+function normalizeTrackedProduct(p) {
+  if (!p) return null;
+  return {
+    ...p,
+    search_query: p.searchQuery !== undefined ? p.searchQuery : p.search_query,
+    our_price: p.ourPrice !== undefined ? p.ourPrice : p.our_price,
+    cost_price: p.costPrice !== undefined ? p.costPrice : p.cost_price,
+    platform_id: p.platformId !== undefined ? p.platformId : p.platform_id,
+    platform_product_id: p.platformProductId !== undefined ? p.platformProductId : p.platform_product_id,
+    platform_variant_id: p.platformVariantId !== undefined ? p.platformVariantId : p.platform_variant_id,
+    suggested_price: p.suggestedPrice !== undefined ? p.suggestedPrice : p.suggested_price,
+    lowest_competitor: p.lowestCompetitor !== undefined ? p.lowestCompetitor : p.lowest_competitor,
+    last_competitors: p.lastCompetitors !== undefined ? p.lastCompetitors : p.last_competitors,
+    price_history: p.priceHistory !== undefined ? p.priceHistory : p.price_history,
+    last_scan_at: p.lastScanAt !== undefined ? p.lastScanAt : p.last_scan_at,
+    competitor_count: p.competitorCount !== undefined ? p.competitorCount : p.competitor_count,
+    auto_sync: p.autoSync !== undefined ? p.autoSync : p.auto_sync,
+    scheduler_minutes: p.schedulerMinutes !== undefined ? p.schedulerMinutes : p.scheduler_minutes
+  };
+}
+
+function sbPatchPayload(updates) {
+  const norm = normalizeTrackedProduct(updates);
+  const allowed = ['id','user_id','name','search_query','our_price','cost_price','platform_id','rules','suggested_price','lowest_competitor','last_competitors','price_history','last_scan_at','competitor_count','auto_sync','scheduler_minutes','platform_product_id','platform_variant_id'];
+  const res = {};
+  for (const k of allowed) {
+    if (norm[k] !== undefined) res[k] = norm[k];
+  }
+  return res;
+}
+
 console.log(`✅ DB hazır — Supabase: ${hasSupabase ? 'aktif' : 'JSON fallback'}`);
 
 function addLog(platformId, type, message, level = 'info') {
@@ -718,11 +750,27 @@ app.get('/api/tracker/products/:id', requireAuth, async(req, res) => {
 // Ürünü güncelle
 app.patch('/api/tracker/products/:id', requireAuth, async(req, res) => {
   try {
-    const p = db.getTrackedProduct(req.params.id, req.userId);
-    if (!p) return res.status(404).json({ error: 'Bulunamadı' });
+    let p;
+    if (hasSupabase) {
+      const rows = await sbQuery('tracked_products', 'GET', null, `?id=eq.${req.params.id}&user_id=eq.${req.userId}`);
+      if (!rows.length) return res.status(404).json({ error: 'Bulunamadı' });
+      p = rows[0];
+    } else {
+      p = db.getTrackedProduct(req.params.id, req.userId);
+      if (!p) return res.status(404).json({ error: 'Bulunamadı' });
+    }
+    
     const updates = req.body;
-    Object.assign(p, updates);
-    db.saveTrackedProduct(p);
+    let norm = normalizeTrackedProduct(updates);
+    
+    if (hasSupabase) {
+      const payload = sbPatchPayload(norm);
+      await sbQuery('tracked_products', 'PATCH', payload, `?id=eq.${p.id}`);
+      p = { ...p, ...payload };
+    } else {
+      Object.assign(p, norm);
+      db.saveTrackedProduct(p);
+    }
     res.json({ ok: true, product: p });
   } catch(e) {
     res.status(500).json({ error: e.message });
@@ -842,24 +890,40 @@ app.post('/api/tracker/products/:id/create-platform-product', requireAuth, async
 // Fiyatı platforma push et
 app.post('/api/tracker/products/:id/push', requireAuth, async(req, res) => {
   try {
-    const p = db.getTrackedProduct(req.params.id, req.userId);
-    if (!p) return res.status(404).json({ error: 'Bulunamadı' });
-    if (!p.platformId) return res.status(400).json({ error: 'Platform bağlı değil' });
-    
-    const price = req.body.price || p.suggestedPrice;
-    if (!price) return res.status(400).json({ error: 'Fiyat hesaplanmamış' });
-    
-    const platform = await getPlatformForUser(p.platformId, req.userId);
-    // Platform ürün ID'si varsa güncelle
-    if (p.platformProductId && p.platformVariantId) {
-      await platformUpdatePrice(platform, { id: p.platformProductId, variantId: p.platformVariantId }, price);
+    let p;
+    if (hasSupabase) {
+      const rows = await sbQuery('tracked_products', 'GET', null, `?id=eq.${req.params.id}&user_id=eq.${req.userId}`);
+      if (!rows.length) return res.status(404).json({ error: 'Bulunamadı' });
+      p = normalizeTrackedProduct(rows[0]);
+    } else {
+      p = db.getTrackedProduct(req.params.id, req.userId);
+      if (!p) return res.status(404).json({ error: 'Bulunamadı' });
+      p = normalizeTrackedProduct(p);
     }
     
-    p.ourPrice = price;
-    p.lastPushAt = new Date().toISOString();
-    db.saveTrackedProduct(p);
+    const platformId = p.platform_id;
+    if (!platformId) return res.status(400).json({ error: 'Platform bağlı değil' });
     
-    addLog(p.platformId, 'TRACKER-PUSH', `${p.name} → ${price}₺`, 'success');
+    const price = req.body.price || p.suggested_price;
+    if (!price) return res.status(400).json({ error: 'Fiyat hesaplanmamış' });
+    
+    const platform = await getPlatformForUser(platformId, req.userId);
+    // Platform ürün ID'si varsa güncelle
+    if (p.platform_product_id && p.platform_variant_id) {
+      await platformUpdatePrice(platform, { id: p.platform_product_id, variantId: p.platform_variant_id }, price);
+    } else {
+      return res.status(400).json({ error: 'Platform ürünü oluşturulmamış, önce platform ürünü oluşturun' });
+    }
+    
+    p.our_price = price;
+    
+    if (hasSupabase) {
+      await sbQuery('tracked_products', 'PATCH', { our_price: price }, `?id=eq.${p.id}`);
+    } else {
+      db.saveTrackedProduct(p);
+    }
+    
+    addLog(platformId, 'TRACKER-PUSH', `${p.name} → ${price}₺`, 'success');
     res.json({ ok: true, price });
   } catch(e) {
     res.status(500).json({ error: e.message });
@@ -869,12 +933,23 @@ app.post('/api/tracker/products/:id/push', requireAuth, async(req, res) => {
 // Zamanlayıcı başlat
 app.post('/api/tracker/products/:id/scheduler/start', requireAuth, async(req, res) => {
   try {
-    const p = db.getTrackedProduct(req.params.id, req.userId);
-    if (!p) return res.status(404).json({ error: 'Bulunamadı' });
+    let p;
+    if (hasSupabase) {
+      const rows = await sbQuery('tracked_products', 'GET', null, `?id=eq.${req.params.id}&user_id=eq.${req.userId}`);
+      if (!rows.length) return res.status(404).json({ error: 'Bulunamadı' });
+      p = rows[0];
+    } else {
+      p = db.getTrackedProduct(req.params.id, req.userId);
+      if (!p) return res.status(404).json({ error: 'Bulunamadı' });
+    }
     const minutes = req.body.intervalMinutes || 60;
     startTrackerScheduler(p.id, req.userId, minutes);
-    p.schedulerMinutes = minutes;
-    db.saveTrackedProduct(p);
+    if (hasSupabase) {
+      await sbQuery('tracked_products', 'PATCH', { scheduler_minutes: minutes }, `?id=eq.${p.id}`);
+    } else {
+      p.scheduler_minutes = minutes;
+      db.saveTrackedProduct(p);
+    }
     res.json({ ok: true, intervalMinutes: minutes });
   } catch(e) {
     res.status(500).json({ error: e.message });
