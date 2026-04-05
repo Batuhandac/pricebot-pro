@@ -256,21 +256,50 @@ body{background:#0b1326;color:#dae2fd;font-family:'Inter',sans-serif;margin:0;ov
     </div>
     
     <!-- Search Bar Unit -->
-    <div class="bg-surface-container-low border border-outline-variant/20 p-1 flex items-center group focus-within:border-primary-container/50 transition-all shadow-xl">
-      <div class="px-6 text-on-surface-variant flex items-center">
-        <span class="material-symbols-outlined">search</span>
+    <div id="searchWrapper" class="relative group mt-8">
+      <div class="bg-surface-container-low border border-outline-variant/20 p-1 flex items-center group-focus-within:border-primary-container/50 transition-all shadow-xl relative z-20">
+        <div class="px-6 text-on-surface-variant flex items-center">
+          <span class="material-symbols-outlined">search</span>
+        </div>
+        <input id="serpQuery" class="bg-transparent border-none focus:ring-0 w-full py-6 text-xl font-body text-on-surface placeholder:text-on-surface-variant/40 outline-none" placeholder="Search product by name, EAN, or URL (e.g., Dyson)" type="text" onkeydown="onSearchKeydown(event)" oninput="onSearchInput(this.value)" onfocus="showSuggestions()"/>
+        
+        <!-- Loading Spinner -->
+        <div id="searchSpinner" class="hidden pr-4">
+          <span class="material-symbols-outlined animate-spin text-secondary">refresh</span>
+        </div>
+        
+        <button type="button" onclick="doSerpSearch()" class="bg-primary-container text-on-primary-container px-10 py-6 font-bold uppercase tracking-widest text-xs hover:brightness-110 active:opacity-80 transition-all sharp-edge">
+            Scan Market
+        </button>
       </div>
-      <input id="serpQuery" class="bg-transparent border-none focus:ring-0 w-full py-6 text-xl font-body text-on-surface placeholder:text-on-surface-variant/40 outline-none" placeholder="Search product by name, EAN, or URL (e.g., Dyson)" type="text" onkeydown="if(event.key==='Enter'){event.preventDefault();doSerpSearch();}"/>
-      <button type="button" onclick="doSerpSearch()" class="bg-primary-container text-on-primary-container px-10 py-6 font-bold uppercase tracking-widest text-xs hover:brightness-110 active:opacity-80 transition-all sharp-edge">
-          Scan Market
-      </button>
+
+      <!-- Autocomplete Dropdown -->
+      <div id="suggestDropdown" class="hidden absolute top-full left-0 w-full bg-surface-container-low border border-outline-variant/20 border-t-0 shadow-2xl z-50">
+        <div id="suggestContent" class="max-h-80 overflow-y-auto custom-scrollbar">
+          <!-- Suggestions injected here -->
+        </div>
+        <div class="bg-surface-container-lowest p-3 text-center border-t border-outline-variant/10 cursor-pointer hover:bg-surface-container transition-colors" onclick="doSerpSearch()">
+           <span class="text-[10px] uppercase font-bold tracking-widest text-primary-container">Tüm Sonuçları Gör →</span>
+        </div>
+      </div>
     </div>
     
     <!-- Filter Chips -->
     <div class="flex gap-3 mt-4">
-      <button type="button" class="bg-surface-container text-[10px] font-bold uppercase tracking-widest text-on-surface-variant px-4 py-2 border border-outline-variant/10 hover:border-primary-container/30 transition-all" onclick="document.getElementById('serpQuery').value='Dyson'; doSerpSearch()">Trending: Dyson</button>
-      <button type="button" class="bg-surface-container text-[10px] font-bold uppercase tracking-widest text-on-surface-variant px-4 py-2 border border-outline-variant/10 hover:border-primary-container/30 transition-all" onclick="document.getElementById('serpQuery').value='PlayStation 5'; doSerpSearch()">Trending: PlayStation 5</button>
-      <button type="button" class="bg-surface-container text-[10px] font-bold uppercase tracking-widest text-on-surface-variant px-4 py-2 border border-outline-variant/10 hover:border-primary-container/30 transition-all" onclick="document.getElementById('serpQuery').value='Stanley'; doSerpSearch()">Trending: Stanley</button>
+      <button type="button" class="bg-surface-container text-[10px] font-bold uppercase tracking-widest text-on-surface-variant px-4 py-2 border border-outline-variant/10 hover:border-primary-container/30 transition-all" onclick="quickSearch('Dyson')">Trending: Dyson</button>
+      <button type="button" class="bg-surface-container text-[10px] font-bold uppercase tracking-widest text-on-surface-variant px-4 py-2 border border-outline-variant/10 hover:border-primary-container/30 transition-all" onclick="quickSearch('PlayStation 5')">Trending: PlayStation 5</button>
+      <button type="button" class="bg-surface-container text-[10px] font-bold uppercase tracking-widest text-on-surface-variant px-4 py-2 border border-outline-variant/10 hover:border-primary-container/30 transition-all" onclick="quickSearch('Stanley')">Trending: Stanley</button>
+    </div>
+  </section>
+
+  <!-- Popular Products Section -->
+  <section id="popularSection" class="max-w-6xl mx-auto mb-16">
+    <div class="flex items-center gap-2 mb-6">
+      <span class="material-symbols-outlined text-secondary">trending_up</span>
+      <h2 class="text-sm font-bold uppercase tracking-[0.2em] text-on-surface-variant">Popüler Aramalar</h2>
+    </div>
+    <div id="popularGrid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+      <!-- Injected by loadPopularProducts -->
     </div>
   </section>
 
