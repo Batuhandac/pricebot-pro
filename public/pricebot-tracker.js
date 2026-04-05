@@ -550,7 +550,28 @@ window.renderSmartGroupDetail = function(group) {
           <span class="text-[10px] font-bold uppercase text-on-surface-variant tracking-widest">${r.source || 'Genel'}</span>
           ${r.rating ? `<span class="text-[10px] text-primary-container">★ ${r.rating}</span>` : ''}
         </div>
-        <h3 class="text-sm font-body text-on-surface leading-tight mb-4 line-clamp-2 flex-1" title="${r.name}">${r.name}</h3>
+        <h3 class="text-sm font-body text-on-surface leading-tight mb-2 line-clamp-2" title="${r.name}">${r.name}</h3>
+        
+        <div class="flex flex-wrap gap-1.5 mb-4 flex-1 content-start">
+          ${(() => {
+            const tags = [];
+            
+            // Extract memory/storage
+            const memMatch = r.name.match(/\b(\d+)\s?(gb|tb)\b/i);
+            if (memMatch) tags.push(`<span class="bg-surface-container-highest text-on-surface text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-sm">${memMatch[0].replace(/\s/g, '')}</span>`);
+            
+            // Extract typical colors (Turkish and English)
+            const colorMatch = r.name.match(/\b(siyah|beyaz|mavi|kırmızı|yeşil|sarı|mor|pembe|grafit|titanyum|gümüş|gece yarısı|yıldız ışığı|black|white|blue|red|green|silver|titanium|midnight|starlight)\b/i);
+            if (colorMatch) tags.push(`<span class="bg-primary/15 text-primary-container text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-sm">${colorMatch[0]}</span>`);
+            
+            // Refurbished warning tag
+            if (/yenilenmiş|teşhir|ikinci el|defolu/i.test(r.name)) {
+               tags.push(`<span class="bg-error/20 text-error text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-sm border border-error/50">YENİLENMİŞ / KULLANILMIŞ</span>`);
+            }
+            
+            return tags.join('');
+          })()}
+        </div>
         <div class="mt-auto">
           <p class="text-xl font-headline font-extrabold ${isLowest ? 'text-secondary' : 'text-on-surface'} mb-1">${fTRY(r.priceTRY)}</p>
           ${r.link ? `<a href="${r.link}" target="_blank" class="text-[10px] text-primary hover:underline">Mağazaya git →</a>` : ''}
