@@ -20,6 +20,8 @@ const SUPABASE_URL         = process.env.SUPABASE_URL         || '';
 const SUPABASE_SECRET_KEY  = process.env.SUPABASE_SECRET_KEY  || '';
 const SUPABASE_PUBLISHABLE = process.env.SUPABASE_PUBLISHABLE_KEY || '';
 const SERPAPI_KEY          = process.env.SERPAPI_KEY           || '';
+const POKEMON_API_KEY      = process.env.POKEMON_API_KEY       || '';
+const JUSTTCG_API_KEY      = process.env.JUSTTCG_API_KEY       || '';
 
 const hasPriceCharting = !!PRICECHARTING_TOKEN;
 const hasEbayBrowse    = !!EBAY_APP_ID && !!EBAY_CERT_ID;
@@ -148,7 +150,6 @@ function addLog(platformId, type, message, level = 'info') {
 // ═══════════════════════════════════════════
 const STRATEGIES = {
   pokemon:    { keywords:['pokemon','pokémon','pikachu','charizard','scarlet','violet','paldea','booster','surging','stellar','temporal'], marginAboveGlobal:15, maxRaise:40, maxDrop:20, minMargin:20 },
-  naruto:     { keywords:['naruto','kayou','sasuke','itachi'],            marginAboveGlobal:20, maxRaise:35, maxDrop:15, minMargin:25 },
   onepiece:   { keywords:['one piece','op-0','luffy','zoro'],             marginAboveGlobal:12, maxRaise:30, maxDrop:20, minMargin:18 },
   magic:      { keywords:['magic','mtg','commander','gathering'],         marginAboveGlobal:10, maxRaise:25, maxDrop:15, minMargin:15 },
   yugioh:     { keywords:['yu-gi-oh','yugioh','ygo'],                     marginAboveGlobal:18, maxRaise:35, maxDrop:15, minMargin:20 },
@@ -563,25 +564,50 @@ const priceCache = new Map();
 async function getGlobalPrice(productName) {
   const cKey = productName.toLowerCase().trim();
   const cached = priceCache.get(cKey);
-  if (cached && Date.now()-cached.ts < 60*60*1000) return cached.data;
+  if (cached && Date.now()-cached.ts < 24*60*60*1000) return cached.data;
   const rates = ratesCache, sources = [], errors = [];
   const category = detectCategory(productName);
   const searchTerm = productName.replace(/booster box|booster pack|elite trainer box|etb|\btr\b|\ben\b|\bjp\b|display/gi,'').replace(/\(\d+.*?\)/g,'').trim().split(' ').slice(0,3).join(' ');
 
   if (['pokemon','default'].includes(category)) {
     try {
-      const r = await fetch(`https://api.tcgdex.net/v2/en/cards?name=${encodeURIComponent(searchTerm)}&itemsPerPage=3`,{signal:AbortSignal.timeout(8000)});
-      if (r.ok) { const list = await r.json(); if (Array.isArray(list) && list.length) { const dr = await fetch(`https://api.tcgdex.net/v2/en/cards/${list[0].id}`,{signal:AbortSignal.timeout(8000)}); if (dr.ok) { const card = await dr.json(); const cmEUR=card.pricing?.cardmarket?.avg30||card.pricing?.cardmarket?.trend||0; const tcgUSD=card.pricing?.tcgplayer?.holo?.marketPrice||card.pricing?.tcgplayer?.normal?.marketPrice||0; if(cmEUR>0)sources.push({source:'Cardmarket (TCGdex)',priceEUR:cmEUR,priceTRY:Math.round(cmEUR*rates.EUR)}); if(tcgUSD>0)sources.push({source:'TCGPlayer (TCGdex)',priceUSD:tcgUSD,priceTRY:Math.round(tcgUSD*rates.USD)}); } } }
-    } catch(e) { errors.push('TCGdex:'+e.message); }
+      const headers = POKEMON_API_KEY ? { 'X-Api-Key': POKEMON_API_KEY } : {};
+      const r = await fetch(`https://api.pokemontcg.io/v2/cards?q=name:"${encodeURIComponent(searchTerm)}"&pageSize=3`, { headers, signal: AbortSignal.timeout(8000) });
+      if (r.ok) { 
+        const d = await r.json(); 
+        const card = d.data?.[0]; 
+        if (card) {
+          const tcgUSD = card.tcgplayer?.prices?.market || card.tcgplayer?.prices?.mid || card.tcgplayer?.prices?.low || 0;
+          const cmEUR = card.cardmarket?.prices?.averageSellPrice || card.cardmarket?.prices?.trendPrice || 0;
+          if (tcgUSD > 0) sources.push({ source: 'TCGPlayer (PKMN API)', priceUSD: tcgUSD, priceTRY: Math.round(tcgUSD * rates.USD) });
+          if (cmEUR > 0) sources.push({ source: 'Cardmarket (PKMN API)', priceEUR: cmEUR, priceTRY: Math.round(cmEUR * rates.EUR) });
+        } 
+      }
+    } catch(e) { errors.push('PokemonTCG:'+e.message); }
   }
   if (['yugioh','default'].includes(category)) {
-    try { const r = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?fname=${encodeURIComponent(searchTerm)}&num=1`,{signal:AbortSignal.timeout(8000)}); if (r.ok) { const d=await r.json(); const card=d.data?.[0]; if(card){ const tcp=parseFloat(card.card_prices?.[0]?.tcgplayer_price||0),cm=parseFloat(card.card_prices?.[0]?.cardmarket_price||0); if(tcp>0)sources.push({source:'TCGPlayer (YGO)',priceUSD:tcp,priceTRY:Math.round(tcp*rates.USD)}); if(cm>0)sources.push({source:'Cardmarket (YGO)',priceEUR:cm,priceTRY:Math.round(cm*rates.EUR)}); } } } catch(e) { errors.push('YGO:'+e.message); }
+    try { const r = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?fname=${encodeURIComponent(searchTerm)}&num=1`,{signal:AbortSignal.timeout(8000)}); if (r.ok) { const d=await r.json(); const card=d.data?.[0]; if(card){ const tcp=parseFloat(card.card_prices?.[0]?.tcgplayer_price||0),cm=parseFloat(card.card_prices?.[0]?.cardmarket_price||0),ama=parseFloat(card.card_prices?.[0]?.amazon_price||0); if(tcp>0)sources.push({source:'TCGPlayer (YGO)',priceUSD:tcp,priceTRY:Math.round(tcp*rates.USD)}); if(cm>0)sources.push({source:'Cardmarket (YGO)',priceEUR:cm,priceTRY:Math.round(cm*rates.EUR)}); if(ama>0)sources.push({source:'Amazon (YGO)',priceUSD:ama,priceTRY:Math.round(ama*rates.USD)}); } } } catch(e) { errors.push('YGO:'+e.message); }
   }
   if (['magic','default'].includes(category)) {
     try { const r = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(searchTerm)}`,{signal:AbortSignal.timeout(8000)}); if (r.ok) { const card=await r.json(); const usd=parseFloat(card.prices?.usd||card.prices?.usd_foil||0),eur=parseFloat(card.prices?.eur||card.prices?.eur_foil||0); if(usd>0)sources.push({source:'TCGPlayer (Scryfall)',priceUSD:usd,priceTRY:Math.round(usd*rates.USD)}); if(eur>0)sources.push({source:'Cardmarket (Scryfall)',priceEUR:eur,priceTRY:Math.round(eur*rates.EUR)}); } } catch(e) { errors.push('Scryfall:'+e.message); }
   }
   if (category==='onepiece') {
-    try { const r=await fetch(`https://optcgapi.com/api/cards/?search=${encodeURIComponent(searchTerm)}`,{signal:AbortSignal.timeout(8000)}); if(r.ok){const d=await r.json();const card=(d.results||d||[])[0];if(card){const usd=parseFloat(card.price||0);if(usd>0)sources.push({source:'OPTCG',priceUSD:usd,priceTRY:Math.round(usd*rates.USD)});}} } catch(e) { errors.push('OPTCG:'+e.message); }
+    let optcgSuccess = false;
+    try {
+      if (JUSTTCG_API_KEY) {
+         const jr = await fetch(`https://api.justtcg.com/cards?game=one_piece&name=${encodeURIComponent(searchTerm)}&limit=1`, { headers: { 'x-api-key': JUSTTCG_API_KEY }, signal: AbortSignal.timeout(8000) });
+         if (jr.ok) {
+           const d = await jr.json(); const card = d.data?.[0];
+           if (card && card.price_tcgplayer) {
+             const tcgUSD = parseFloat(card.price_tcgplayer);
+             if (tcgUSD > 0) { sources.push({source: 'JustTCG (OP)', priceUSD: tcgUSD, priceTRY: Math.round(tcgUSD*rates.USD)}); optcgSuccess = true; }
+           }
+         }
+      }
+    } catch(e) { errors.push('JustTCG:'+e.message); }
+    if (!optcgSuccess) {
+      try { const r=await fetch(`https://optcgapi.com/api/cards/?search=${encodeURIComponent(searchTerm)}`,{signal:AbortSignal.timeout(8000)}); if(r.ok){const d=await r.json();const card=(d.results||d||[])[0];if(card){const usd=parseFloat(card.price||0);if(usd>0)sources.push({source:'OPTCG',priceUSD:usd,priceTRY:Math.round(usd*rates.USD)});}} } catch(e) { errors.push('OPTCG:'+e.message); }
+    }
   }
   const tryPrices=sources.map(s=>s.priceTRY).filter(p=>p>0);
   const avgTRY=tryPrices.length?Math.round(tryPrices.reduce((a,b)=>a+b,0)/tryPrices.length):null;
