@@ -257,6 +257,224 @@ async function serpAPISearch(query, location = 'Turkey') {
 }
 
 // ═══════════════════════════════════════════
+// AKILLI ÜRÜN MODEL ÇIKARIMI & VARYANT
+// ═══════════════════════════════════════════
+const ACCESSORY_KEYWORDS = ['kılıf','kilif','case','cover','kapak','koruyucu','koruma','protector','screen','cam','tempered','kablo','cable','charger','şarj','sarj','adaptör','adapter','adaptor','silikon','deri','leather','cüzdan','wallet','stand','mount','tutucu','holder','askı','kayış','strap','band','popsocket','sticker','çıkartma','skin','folio','pouch','çanta','bag','powerbank','güç','batarya','battery','yedek','replacement','onarım','repair','aksesuar','accessory','araç','car','oto','dock','hub','dongle','otg','splitter','switch','extender','uzatma','çevirici','converter'];
+const COLOR_KEYWORDS = ['siyah','black','beyaz','white','mavi','blue','kırmızı','red','yeşil','green','sarı','yellow','mor','purple','pembe','pink','gri','grey','gray','gümüş','silver','altın','gold','turuncu','orange','bej','beige','lacivert','navy','turkuaz','turquoise','bordo','burgundy','krem','cream','titan','titanium','titanyum','grafit','graphite','bronze','bakır','copper','indigo','lavanta','lavender','midnight','starlight','space gray','space grey','desert','natural','blue titanium','black titanium','white titanium','natural titanium','desert titanium'];
+const STORAGE_REGEX = /\b(\d+)\s?(gb|tb|mb)\b/gi;
+const RAM_REGEX = /\b(\d+)\s?gb\s?(ram)\b/gi;
+const SIZE_REGEX = /\b(\d+(?:[.,]\d+)?)\s?(inç|inch|"|cm|mm)\b/gi;
+
+function extractProductModel(name = '', queryHint = '') {
+  const original = name;
+  let s = name.toLowerCase().replace(/\s+/g, ' ').trim();
+  const q = queryHint.toLowerCase().trim();
+
+  // Detect if it's an accessory
+  const isAccessory = ACCESSORY_KEYWORDS.some(kw => s.includes(kw)) && !ACCESSORY_KEYWORDS.some(kw => q.includes(kw));
+
+  // Extract variants
+  const variants = {};
+  
+  // Color
+  const foundColors = [];
+  for (const c of COLOR_KEYWORDS) {
+    if (s.includes(c)) foundColors.push(c.charAt(0).toUpperCase() + c.slice(1));
+  }
+  if (foundColors.length) variants.color = foundColors[0];
+  
+  // Storage
+  const storageMatch = s.match(STORAGE_REGEX);
+  if (storageMatch) {
+    const storages = storageMatch.map(m => m.toUpperCase().replace(/\s/g, ''));
+    // Pick the one most likely to be storage (not RAM)
+    const ramMatch = s.match(RAM_REGEX);
+    const ramValues = ramMatch ? ramMatch.map(m => m.toUpperCase().replace(/\s/g, '')) : [];
+    const storageOnly = storages.filter(st => !ramValues.some(r => r.startsWith(st.replace('GB','').replace('TB',''))));
+    if (storageOnly.length) variants.storage = storageOnly[0];
+    if (ramValues.length) variants.ram = ramValues[0];
+  }
+
+  // Size
+  const sizeMatch = s.match(SIZE_REGEX);
+  if (sizeMatch) variants.size = sizeMatch[0].replace(/\s/g, '');
+
+  // Extract brand + model key
+  // Remove known noise words
+  const noiseWords = new Set([
+    'fiyat','fiyatı','fiyatları','satın','al','resmi','orijinal','original','genuine','official',
+    'garantili','ithalatçı','distribütör','türkiye','turkey','edition','sürüm','version',
+    'amazon','trendyol','hepsiburada','n11','cimri','akakce','teknosa','a101','mediamarkt',
+    'com','tr','www','https','http','indirim','kampanya','fırsat','deal','sale','outlet',
+    'ücretsiz','kargo','free','shipping','hediye','gift','bonus','kutu','box','paket','set',
+    'adet','pcs','li','lu','lü','lı','stok','stock','yeni','new','son','latest','model',
+    'ürün','product','mağaza','store','satıcı','seller','tedarik','supply','sipariş','order',
+    've','and','ile','with','için','for','veya','or','the','a','an','de','da','den','dan'
+  ]);
+
+  // Clean up for model extraction
+  let cleaned = s
+    .replace(/[()[\]{}'"!?.,;:\/\\|@#$%^&*+=~`<>]/g, ' ')
+    .replace(/\b\d+(?:[.,]\d+)?\s?(tl|₺|lira|try)\b/gi, '')
+    .replace(STORAGE_REGEX, ' ')
+    .replace(SIZE_REGEX, ' ');
+
+  // Remove colors from model key
+  for (const c of COLOR_KEYWORDS) {
+    cleaned = cleaned.replace(new RegExp('\\b' + c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'gi'), ' ');
+  }
+  // Remove accessory keywords
+  for (const kw of ACCESSORY_KEYWORDS) {
+    cleaned = cleaned.replace(new RegExp('\\b' + kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'gi'), ' ');
+  }
+
+  const tokens = cleaned.split(/\s+/).filter(t => t.length > 1 && !noiseWords.has(t));
+  
+  // Take first 3-4 meaningful tokens as the model key
+  const modelTokens = tokens.slice(0, 4);
+  const modelKey = modelTokens.join(' ').trim() || 'Diğer';
+
+  return {
+    original,
+    modelKey,
+    displayName: modelTokens.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(' '),
+    isAccessory,
+    variants,
+    variantKey: Object.values(variants).join(' | ') || 'Standart'
+  };
+}
+
+function groupSearchResults(results = [], query = '') {
+  const modelMap = new Map();
+  const accessoryGroup = { key: '__accessories__', displayName: 'Kılıf & Aksesuar', items: [], variants: new Map(), images: [], lowestPrice: Infinity, highestPrice: 0 };
+
+  for (const item of results) {
+    const parsed = extractProductModel(item.name || '', query);
+    
+    if (parsed.isAccessory) {
+      accessoryGroup.items.push({ ...item, _parsed: parsed });
+      if (item.priceTRY && item.priceTRY < accessoryGroup.lowestPrice) accessoryGroup.lowestPrice = item.priceTRY;
+      if (item.priceTRY && item.priceTRY > accessoryGroup.highestPrice) accessoryGroup.highestPrice = item.priceTRY;
+      if (item.image) accessoryGroup.images.push(item.image);
+      continue;
+    }
+
+    const key = parsed.modelKey;
+    if (!modelMap.has(key)) {
+      modelMap.set(key, {
+        key,
+        displayName: parsed.displayName,
+        items: [],
+        variants: new Map(),
+        images: [],
+        lowestPrice: Infinity,
+        highestPrice: 0
+      });
+    }
+
+    const group = modelMap.get(key);
+    group.items.push({ ...item, _parsed: parsed });
+    if (item.image && !group.images.includes(item.image)) group.images.push(item.image);
+    if (item.priceTRY && item.priceTRY < group.lowestPrice) group.lowestPrice = item.priceTRY;
+    if (item.priceTRY && item.priceTRY > group.highestPrice) group.highestPrice = item.priceTRY;
+
+    // Build variant map
+    const vk = parsed.variantKey;
+    if (!group.variants.has(vk)) {
+      group.variants.set(vk, { ...parsed.variants, items: [], lowestPrice: Infinity, image: item.image });
+    }
+    const variant = group.variants.get(vk);
+    variant.items.push(item);
+    if (item.priceTRY && item.priceTRY < variant.lowestPrice) variant.lowestPrice = item.priceTRY;
+    if (item.image && !variant.image) variant.image = item.image;
+  }
+
+  // Convert to array
+  const groups = Array.from(modelMap.values())
+    .map(g => ({
+      ...g,
+      lowestPrice: isFinite(g.lowestPrice) ? g.lowestPrice : 0,
+      highestPrice: g.highestPrice || 0,
+      image: g.images[0] || null,
+      variantCount: g.variants.size,
+      variants: Array.from(g.variants.entries()).map(([k, v]) => ({
+        key: k,
+        ...v,
+        lowestPrice: isFinite(v.lowestPrice) ? v.lowestPrice : 0,
+        itemCount: v.items.length
+      })),
+      sourceCount: new Set(g.items.map(x => x.source).filter(Boolean)).size,
+      platformCount: new Set(g.items.map(x => x.platform).filter(Boolean)).size
+    }))
+    .sort((a, b) => (a.lowestPrice || Infinity) - (b.lowestPrice || Infinity));
+
+  // Add accessories at the end if any
+  if (accessoryGroup.items.length > 0) {
+    groups.push({
+      ...accessoryGroup,
+      lowestPrice: isFinite(accessoryGroup.lowestPrice) ? accessoryGroup.lowestPrice : 0,
+      highestPrice: accessoryGroup.highestPrice || 0,
+      image: accessoryGroup.images[0] || null,
+      variantCount: 0,
+      variants: [],
+      sourceCount: new Set(accessoryGroup.items.map(x => x.source).filter(Boolean)).size,
+      platformCount: new Set(accessoryGroup.items.map(x => x.platform).filter(Boolean)).size
+    });
+  }
+
+  return groups;
+}
+
+// Popüler ürün seed'leri (Türkiye pazarı)
+const POPULAR_PRODUCTS = [
+  { category: 'Telefon', icon: '📱', items: [
+    { name: 'iPhone 16 Pro Max', query: 'iPhone 16 Pro Max', image: null },
+    { name: 'iPhone 16', query: 'iPhone 16', image: null },
+    { name: 'Samsung Galaxy S25 Ultra', query: 'Samsung Galaxy S25 Ultra', image: null },
+    { name: 'Xiaomi 15 Pro', query: 'Xiaomi 15 Pro', image: null },
+  ]},
+  { category: 'Bilgisayar', icon: '💻', items: [
+    { name: 'MacBook Air M4', query: 'MacBook Air M4', image: null },
+    { name: 'MacBook Pro M4', query: 'MacBook Pro M4 Pro', image: null },
+    { name: 'ASUS ROG Laptop', query: 'ASUS ROG laptop', image: null },
+    { name: 'Lenovo ThinkPad', query: 'Lenovo ThinkPad', image: null },
+  ]},
+  { category: 'Kulaklık', icon: '🎧', items: [
+    { name: 'AirPods Pro 2', query: 'AirPods Pro 2', image: null },
+    { name: 'AirPods 4', query: 'AirPods 4', image: null },
+    { name: 'Sony WH-1000XM5', query: 'Sony WH-1000XM5', image: null },
+    { name: 'Samsung Galaxy Buds3 Pro', query: 'Samsung Galaxy Buds3 Pro', image: null },
+  ]},
+  { category: 'Oyun', icon: '🎮', items: [
+    { name: 'PlayStation 5 Pro', query: 'PlayStation 5 Pro', image: null },
+    { name: 'Xbox Series X', query: 'Xbox Series X', image: null },
+    { name: 'Nintendo Switch 2', query: 'Nintendo Switch 2', image: null },
+    { name: 'PS5 DualSense', query: 'PS5 DualSense controller', image: null },
+  ]},
+  { category: 'Ev Aletleri', icon: '🏠', items: [
+    { name: 'Dyson V15', query: 'Dyson V15 süpürge', image: null },
+    { name: 'Dyson Airwrap', query: 'Dyson Airwrap', image: null },
+    { name: 'iRobot Roomba', query: 'iRobot Roomba', image: null },
+    { name: 'Philips Air Fryer', query: 'Philips Airfryer XXL', image: null },
+  ]},
+  { category: 'Tablet', icon: '📱', items: [
+    { name: 'iPad Pro M4', query: 'iPad Pro M4', image: null },
+    { name: 'iPad Air M3', query: 'iPad Air M3', image: null },
+    { name: 'Samsung Galaxy Tab S10', query: 'Samsung Galaxy Tab S10', image: null },
+  ]},
+];
+
+const popularCache = new Map();
+
+// Popüler kartlar (TCG)
+const POPULAR_CARD_SEEDS = {
+  pokemon: ['Charizard', 'Pikachu', 'Mewtwo', 'Lugia', 'Rayquaza', 'Umbreon', 'Gengar', 'Eevee'],
+  yugioh: ['Blue-Eyes White Dragon', 'Dark Magician', 'Exodia', 'Red-Eyes Black Dragon', 'Pot of Greed', 'Ash Blossom'],
+  magic: ['Black Lotus', 'Lightning Bolt', 'Counterspell', 'Sol Ring', 'Force of Will', 'Mox Pearl']
+};
+const popularCardCache = new Map();
+
+// ═══════════════════════════════════════════
 // PRICE TRACKER — Rakip Fiyat Algoritması
 // ═══════════════════════════════════════════
 function calculateBeatPrice(competitorPrices, rules) {
@@ -622,18 +840,180 @@ app.get('/api/auth/me', requireAuth, (req,res)=>res.json({id:req.userId,email:re
 // PRICE TRACKER API
 // ═══════════════════════════════════════════
 
-// SerpAPI arama
+// SerpAPI arama (geliştirilmiş — server-side gruplama)
 app.post('/api/tracker/search', requireAuth, async(req, res) => {
   const { query, location } = req.body;
   if (!query) return res.status(400).json({ error: 'query gerekli' });
   try {
     await refreshRates();
     const data = await serpAPISearch(query, location || 'Turkey');
-    res.json(data);
+    // Server-side akıllı gruplama
+    const groups = groupSearchResults(data.results || [], query);
+    res.json({ ...data, groups });
   } catch(e) {
     res.status(500).json({ error: e.message });
   }
 });
+
+// Autocomplete önerileri
+app.post('/api/tracker/suggest', requireAuth, async(req, res) => {
+  const { query } = req.body;
+  if (!query || query.length < 2) return res.json({ suggestions: [] });
+  
+  const q = query.toLowerCase().trim();
+  const suggestions = [];
+  
+  // Popüler ürünlerden eşleşenleri bul
+  for (const cat of POPULAR_PRODUCTS) {
+    for (const item of cat.items) {
+      if (item.name.toLowerCase().includes(q) || item.query.toLowerCase().includes(q)) {
+        suggestions.push({ name: item.name, query: item.query, category: cat.category, icon: cat.icon, type: 'popular' });
+      }
+    }
+  }
+  
+  // Daha önce aranmış cache'den eşleşenleri bul
+  for (const [key, cached] of serpCache.entries()) {
+    if (key.includes(q) && cached.data?.results?.length) {
+      const topResult = cached.data.results[0];
+      if (!suggestions.some(s => s.query === key)) {
+        suggestions.push({ name: key, query: key, category: 'Önceki Arama', icon: '🔍', type: 'recent', image: topResult?.image, price: cached.data.lowestPrice });
+      }
+    }
+  }
+  
+  // Genel kategori önerileri
+  const categoryHints = [
+    { trigger: 'iphone', suggestions: ['iPhone 16 Pro Max', 'iPhone 16 Pro', 'iPhone 16', 'iPhone 15', 'iPhone SE'] },
+    { trigger: 'samsung', suggestions: ['Samsung Galaxy S25 Ultra', 'Samsung Galaxy S25+', 'Samsung Galaxy A55', 'Samsung Galaxy Tab S10'] },
+    { trigger: 'macbook', suggestions: ['MacBook Air M4', 'MacBook Pro M4', 'MacBook Pro M4 Max', 'MacBook Air M3'] },
+    { trigger: 'airpods', suggestions: ['AirPods Pro 2', 'AirPods 4', 'AirPods Max'] },
+    { trigger: 'dyson', suggestions: ['Dyson V15 Detect', 'Dyson Airwrap', 'Dyson Supersonic', 'Dyson V12'] },
+    { trigger: 'playstation', suggestions: ['PlayStation 5 Pro', 'PlayStation 5 Slim', 'PS5 DualSense Edge'] },
+    { trigger: 'ps5', suggestions: ['PlayStation 5 Pro', 'PlayStation 5 Slim', 'PS5 DualSense Edge'] },
+    { trigger: 'xbox', suggestions: ['Xbox Series X', 'Xbox Series S', 'Xbox Controller'] },
+    { trigger: 'ipad', suggestions: ['iPad Pro M4', 'iPad Air M3', 'iPad Mini', 'iPad 10. Nesil'] },
+    { trigger: 'xiaomi', suggestions: ['Xiaomi 15 Pro', 'Xiaomi 14T Pro', 'Xiaomi Redmi Note 14 Pro'] },
+    { trigger: 'nintendo', suggestions: ['Nintendo Switch 2', 'Nintendo Switch OLED'] },
+    { trigger: 'sony', suggestions: ['Sony WH-1000XM5', 'Sony WF-1000XM5', 'Sony Alpha A7 IV'] },
+    { trigger: 'apple', suggestions: ['Apple Watch Ultra 2', 'Apple Watch Series 10', 'Apple Vision Pro'] },
+  ];
+  
+  for (const hint of categoryHints) {
+    if (q.includes(hint.trigger)) {
+      for (const s of hint.suggestions) {
+        if (!suggestions.some(x => x.query === s)) {
+          suggestions.push({ name: s, query: s, category: 'Öneri', icon: '💡', type: 'hint' });
+        }
+      }
+    }
+  }
+  
+  res.json({ suggestions: suggestions.slice(0, 10) });
+});
+
+// Popüler ürünler
+app.get('/api/tracker/popular', async(req, res) => {
+  const cacheKey = 'popular_all';
+  const cached = popularCache.get(cacheKey);
+  if (cached && Date.now() - cached.ts < 60 * 60 * 1000) {
+    return res.json(cached.data);
+  }
+  
+  // Popüler kategorileri fiyat bilgisi ile döndür
+  // SerpAPI varsa ilk kategoriden birkaç fiyat çek
+  const categories = POPULAR_PRODUCTS.map(cat => ({
+    ...cat,
+    items: cat.items.map(item => {
+      // Cache'den fiyat varsa ekle
+      const cKey = item.query.toLowerCase().trim();
+      const sc = serpCache.get(cKey);
+      return {
+        ...item,
+        lowestPrice: sc?.data?.lowestPrice || null,
+        image: sc?.data?.results?.[0]?.image || item.image,
+        resultCount: sc?.data?.totalResults || 0
+      };
+    })
+  }));
+  
+  const data = { categories, updatedAt: new Date().toISOString() };
+  popularCache.set(cacheKey, { data, ts: Date.now() });
+  res.json(data);
+});
+
+// Popüler TCG kartları  
+app.get('/api/catalog/popular-cards', async(req, res) => {
+  const game = req.query.game || 'pokemon';
+  const cacheKey = `popular_cards_${game}`;
+  const cached = popularCardCache.get(cacheKey);
+  if (cached && Date.now() - cached.ts < 2 * 60 * 60 * 1000) {
+    return res.json(cached.data);
+  }
+  
+  await refreshRates();
+  const seeds = POPULAR_CARD_SEEDS[game] || POPULAR_CARD_SEEDS.pokemon;
+  const cards = [];
+  
+  for (const seed of seeds.slice(0, 6)) {
+    try {
+      if (game === 'pokemon') {
+        const r = await fetch(`https://api.tcgdex.net/v2/en/cards?name=${encodeURIComponent(seed)}&itemsPerPage=1`, { signal: AbortSignal.timeout(6000) });
+        if (r.ok) {
+          const list = await r.json();
+          if (list[0]) {
+            const dr = await fetch(`https://api.tcgdex.net/v2/en/cards/${list[0].id}`, { signal: AbortSignal.timeout(6000) });
+            if (dr.ok) {
+              const card = await dr.json();
+              const cmEUR = card.pricing?.cardmarket?.avg30 || card.pricing?.cardmarket?.trend || 0;
+              const tcgUSD = card.pricing?.tcgplayer?.holo?.marketPrice || card.pricing?.tcgplayer?.normal?.marketPrice || 0;
+              cards.push({
+                id: card.id, name: card.name, game: 'pokemon',
+                image: card.image ? card.image + '/high.png' : list[0].image ? list[0].image + '/high.png' : null,
+                set: card.set?.name || '', rarity: card.rarity || '',
+                priceEUR: cmEUR, priceUSD: tcgUSD,
+                priceTRY: cmEUR ? Math.round(cmEUR * ratesCache.EUR) : tcgUSD ? Math.round(tcgUSD * ratesCache.USD) : 0
+              });
+            }
+          }
+        }
+      } else if (game === 'yugioh') {
+        const r = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?fname=${encodeURIComponent(seed)}&num=1`, { signal: AbortSignal.timeout(6000) });
+        if (r.ok) {
+          const d = await r.json();
+          const c = d.data?.[0];
+          if (c) {
+            cards.push({
+              id: String(c.id), name: c.name, game: 'yugioh',
+              image: c.card_images?.[0]?.image_url || null,
+              set: c.card_sets?.[0]?.set_name || '', rarity: c.card_sets?.[0]?.set_rarity || '',
+              priceUSD: parseFloat(c.card_prices?.[0]?.tcgplayer_price || 0),
+              priceEUR: parseFloat(c.card_prices?.[0]?.cardmarket_price || 0),
+              priceTRY: parseFloat(c.card_prices?.[0]?.tcgplayer_price || 0) ? Math.round(parseFloat(c.card_prices[0].tcgplayer_price) * ratesCache.USD) : 0
+            });
+          }
+        }
+      } else if (game === 'magic') {
+        const r = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(seed)}`, { signal: AbortSignal.timeout(6000) });
+        if (r.ok) {
+          const c = await r.json();
+          cards.push({
+            id: c.id, name: c.name, game: 'magic',
+            image: c.image_uris?.normal || c.card_faces?.[0]?.image_uris?.normal || null,
+            set: c.set_name || '', rarity: c.rarity || '',
+            priceUSD: parseFloat(c.prices?.usd || 0), priceEUR: parseFloat(c.prices?.eur || 0),
+            priceTRY: parseFloat(c.prices?.usd || 0) ? Math.round(parseFloat(c.prices.usd) * ratesCache.USD) : 0
+          });
+        }
+      }
+    } catch(e) { /* skip */ }
+  }
+  
+  const data = { cards, game, updatedAt: new Date().toISOString() };
+  popularCardCache.set(cacheKey, { data, ts: Date.now() });
+  res.json(data);
+});
+
 
 // Ürün takibe al
 app.post('/api/tracker/products', requireAuth, async(req, res) => {
