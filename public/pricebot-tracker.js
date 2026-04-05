@@ -383,6 +383,189 @@ async function loadTrackedProducts(){
   }catch(e){console.error(e);}
 }
 
+// ─── SEARCH: USE SERVER-SIDE GROUPS ──────────────────────────────────────────
+// Override doSerpSearch to use d.groups from server (smarter than client-side grouping)
+window.doSerpSearch = async function doSerpSearch(overrideQuery=null, isModelInspect=false) {
+  const q = overrideQuery || ($('serpQuery') ? $('serpQuery').value.trim() : '');
+  if (!q) return;
+  if ($('serpQuery')) $('serpQuery').value = q;
+  if ($el) safeHide('suggestDropdown');
+  if ($el) safeHide('popularSection');
+
+  const container = $('serpResults');
+  if (container) container.innerHTML = `
+    <div class="col-span-full py-20 flex flex-col items-center justify-center gap-4 text-center">
+      <span class="material-symbols-outlined text-5xl text-secondary animate-pulse">radar</span>
+      <div>
+        <div class="font-headline font-extrabold text-sm uppercase tracking-widest text-on-surface">${q} taranıyor...</div>
+        <div class="text-xs text-on-surface-variant mt-1">Türkiye pazarındaki 250+ kaynak kontrol ediliyor</div>
+      </div>
+    </div>`;
+
+  const titleEl = $('marketResultsTitle');
+  if (titleEl) titleEl.textContent = `Sonuçlar: ${q}`;
+  const backBtn = $('btnBackToModels');
+  if (backBtn) backBtn.classList.add('hidden');
+
+  try {
+    const res = await fetch(API + '/api/tracker/search', {
+      method: 'POST',
+      headers: hdr(),
+      body: JSON.stringify({ query: q })
+    });
+    const d = await res.json();
+
+    if (d.error) {
+      if (container) container.innerHTML = `<div class="col-span-full py-10 text-center text-error text-sm">${d.error}</div>`;
+      return;
+    }
+
+    LAST_TRACKER_SEARCH = d;
+
+    // Prefer server-side groups (smarter parsing) over client-side
+    const serverGroups = d.groups || [];
+    if (serverGroups.length > 0) {
+      LAST_TRACKER_MODEL_GROUPS = serverGroups;
+      LAST_BROAD_QUERY = q;
+      LAST_BROAD_GROUPS = serverGroups;
+
+      if (serverGroups.length === 1 || isModelInspect) {
+        renderSmartGroupDetail(serverGroups[0]);
+      } else {
+        renderSmartGroups(q, serverGroups);
+      }
+      return;
+    }
+
+    // Fallback: client-side grouping if server groups empty
+    const groups = groupTrackerSearchResults(d.results || [], q);
+    LAST_TRACKER_MODEL_GROUPS = groups;
+    LAST_BROAD_QUERY = q;
+    LAST_BROAD_GROUPS = groups;
+
+    if (!groups.length) {
+      if (container) container.innerHTML = '<div class="col-span-full py-10 text-center text-on-surface-variant text-sm">Sonuç bulunamadı.</div>';
+      return;
+    }
+    if (groups.length <= 1 || isModelInspect) {
+      renderTrackerSearchGroupDetail(0);
+    } else {
+      renderTrackerSearchGroups(q, groups);
+    }
+  } catch(e) {
+    if (container) container.innerHTML = `<div class="col-span-full py-10 text-center text-error text-sm">${e.message}</div>`;
+  }
+};
+
+// ─── RENDER: SERVER GROUPS (Hepsiburada Style) ───────────────────────────────
+window.renderSmartGroups = function(query, groups) {
+  const container = $('serpResults');
+  if (!container) return;
+
+  const mainGroups = groups.filter(g => g.key !== '__accessories__');
+  const accGroup = groups.find(g => g.key === '__accessories__');
+
+  const titleEl = $('marketResultsTitle');
+  if (titleEl) titleEl.textContent = `${query} — ${mainGroups.length} Model Bulundu`;
+  const backBtn = $('btnBackToModels');
+  if (backBtn) backBtn.classList.add('hidden');
+
+  let html = mainGroups.map(g => `
+    <div onclick="renderSmartGroupDetail(window.__lastSmartGroups.find(x=>x.key==='${escJS(g.key)}'))"
+         class="bg-surface-container-low border border-primary-container/10 hover:border-primary-container/50
+                transition-all group overflow-hidden cursor-pointer flex flex-col">
+      <div class="relative h-56 w-full bg-surface-container-lowest flex items-center justify-center p-6">
+        ${g.image
+          ? `<img src="${g.image}" alt="${g.displayName}" class="w-full h-full object-contain transition-all duration-500 scale-90 group-hover:scale-100 group-hover:grayscale-0 grayscale">`
+          : `<span class="material-symbols-outlined text-5xl text-on-surface-variant/30 group-hover:text-on-surface-variant transition-colors">shopping_bag</span>`}
+        <div class="absolute top-3 left-3 bg-secondary-container text-on-secondary-container text-[9px] font-black px-2 py-1 uppercase tracking-wider">
+          ${g.variantCount > 1 ? `${g.variantCount} Varyant` : 'Model'}
+        </div>
+        <div class="absolute top-3 right-3 text-[9px] text-on-surface-variant font-bold">${g.sourceCount || g.items?.length || 0} kaynak</div>
+      </div>
+      <div class="p-5 flex flex-col flex-1">
+        <h3 class="font-headline text-lg font-extrabold text-on-surface leading-tight mb-1 line-clamp-2 group-hover:text-primary-container transition-colors">
+          ${g.displayName}
+        </h3>
+        <div class="mt-auto pt-4 flex items-end justify-between border-t border-outline-variant/10">
+          <div>
+            <p class="text-[9px] uppercase font-bold text-on-surface-variant mb-0.5">Piyasa Başlangıç</p>
+            <p class="text-xl font-headline font-extrabold text-secondary">${fTRY(g.lowestPrice)}</p>
+          </div>
+          <span class="text-[10px] text-primary-container font-bold uppercase tracking-wider group-hover:underline">İncele →</span>
+        </div>
+      </div>
+    </div>`).join('');
+
+  if (accGroup && accGroup.items?.length) {
+    html += `
+      <div onclick="renderSmartGroupDetail(window.__lastSmartGroups.find(x=>x.key==='__accessories__'))"
+           class="bg-surface-container border border-outline-variant/10 hover:border-outline-variant/30
+                  transition-all group overflow-hidden cursor-pointer flex flex-col opacity-70 hover:opacity-100">
+        <div class="p-5">
+          <div class="text-[9px] uppercase font-bold text-on-surface-variant mb-2 tracking-widest">Aksesuar & Kılıf</div>
+          <p class="text-sm font-bold text-on-surface">${accGroup.items.length} Aksesuar Ürünü</p>
+          <p class="text-lg font-bold text-on-surface-variant mt-1">${fTRY(accGroup.lowestPrice)} den başlayan</p>
+        </div>
+      </div>`;
+  }
+
+  container.innerHTML = html;
+  window.__lastSmartGroups = groups;
+};
+
+// ─── RENDER: GROUP DETAIL (Variants + Items) ──────────────────────────────────
+window.renderSmartGroupDetail = function(group) {
+  if (!group) return;
+  const container = $('serpResults');
+  if (!container) return;
+
+  const titleEl = $('marketResultsTitle');
+  if (titleEl) titleEl.textContent = `${group.displayName} — ${group.items?.length || 0} Sonuç`;
+  const backBtn = $('btnBackToModels');
+  if (backBtn) {
+    backBtn.classList.remove('hidden');
+    backBtn.querySelector('button').onclick = () => renderSmartGroups(LAST_BROAD_QUERY, LAST_BROAD_GROUPS);
+  }
+
+  const items = group.items || [];
+  if (!items.length) {
+    container.innerHTML = '<div class="col-span-full py-10 text-center text-on-surface-variant">Bu gruba ait ürün bulunamadı.</div>';
+    return;
+  }
+
+  container.innerHTML = items.map(r => {
+    const isLowest = r.priceTRY === group.lowestPrice;
+    return `
+    <div class="bg-surface-container-low border border-outline-variant/15 hover:border-secondary/30
+                transition-all group overflow-hidden flex flex-col">
+      <div class="relative h-48 w-full bg-surface-container-lowest flex items-center justify-center p-4">
+        ${r.image
+          ? `<img src="${r.image}" class="max-h-full object-contain transition-all duration-500 scale-90 group-hover:scale-100">`
+          : `<span class="material-symbols-outlined text-4xl text-on-surface-variant/30">image</span>`}
+        ${isLowest ? `<div class="absolute top-3 left-3 bg-secondary text-on-secondary text-[9px] font-black px-2 py-1 uppercase">EN UCUZ</div>` : ''}
+      </div>
+      <div class="p-5 flex flex-col flex-1">
+        <div class="flex justify-between items-center mb-2">
+          <span class="text-[10px] font-bold uppercase text-on-surface-variant tracking-widest">${r.source || 'Genel'}</span>
+          ${r.rating ? `<span class="text-[10px] text-primary-container">★ ${r.rating}</span>` : ''}
+        </div>
+        <h3 class="text-sm font-body text-on-surface leading-tight mb-4 line-clamp-2 flex-1" title="${r.name}">${r.name}</h3>
+        <div class="mt-auto">
+          <p class="text-xl font-headline font-extrabold ${isLowest ? 'text-secondary' : 'text-on-surface'} mb-1">${fTRY(r.priceTRY)}</p>
+          ${r.link ? `<a href="${r.link}" target="_blank" class="text-[10px] text-primary hover:underline">Mağazaya git →</a>` : ''}
+        </div>
+        <button onclick="prefillTracker('${escJS(group.displayName)}',${group.lowestPrice||0},'${escJS(group.query||LAST_BROAD_QUERY||'')}')"
+                class="mt-4 w-full bg-secondary/10 border border-secondary/20 text-secondary py-2.5 font-bold uppercase text-[10px] tracking-[0.1em]
+                       hover:bg-secondary hover:text-on-secondary transition-all">
+          Takibe Al
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+};
+
+// ─── RENDER: TRACKED PRODUCTS ──────────────────────────────────────────────
 function renderTrackedProductsBento() {
   const tStr = 'My Armory (Tracked Products)';
   const tEl = document.getElementById('marketResultsTitle');
