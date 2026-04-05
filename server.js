@@ -692,7 +692,16 @@ async function runTrackerUpdate(productId, userId) {
   addLog('tracker', 'TRACKER', `Fiyat tarama: ${tracked.name}`, 'info');
   try {
     const serpData = await serpAPISearch(tracked.searchQuery || tracked.name);
-    const competitors = serpData.results || [];
+    let competitors = serpData.results || [];
+    
+    // Group and pick the target model to prevent tracking cheap accessories
+    const groups = groupSearchResults(competitors, tracked.searchQuery || tracked.name);
+    const targetGroup = groups.find(g => g.key !== '__accessories__');
+    if (targetGroup && targetGroup.items && targetGroup.items.length > 0) {
+       competitors = targetGroup.items;
+       serpData.lowestPrice = targetGroup.lowestPrice;
+       serpData.avgPrice = Math.round(targetGroup.items.reduce((s,r)=>s+r.priceTRY,0)/targetGroup.items.length);
+    }
     
     // Fiyat geçmişine ekle
     if (!tracked.priceHistory) tracked.priceHistory = [];
@@ -1049,11 +1058,22 @@ app.post('/api/tracker/products', requireAuth, async(req, res) => {
     
     // İlk tarama yap
     const serpData = await serpAPISearch(product.search_query);
-    product.last_competitors = (serpData.results || []).slice(0, 20);
-    product.competitor_count = serpData.results?.length || 0;
+    let competitors = serpData.results || [];
     
-    if (serpData.results?.length && product.rules) {
-      const calc = calculateBeatPrice(serpData.results, { ...product.rules, currentPrice: product.our_price });
+    // Group and pick the target model to prevent cheap accessories
+    const groups = groupSearchResults(competitors, product.search_query);
+    const targetGroup = groups.find(g => g.key !== '__accessories__');
+    if (targetGroup && targetGroup.items && targetGroup.items.length > 0) {
+       competitors = targetGroup.items;
+       serpData.lowestPrice = targetGroup.lowestPrice;
+       serpData.avgPrice = Math.round(competitors.reduce((s,r)=>s+r.priceTRY,0)/competitors.length);
+    }
+
+    product.last_competitors = competitors.slice(0, 20);
+    product.competitor_count = competitors.length;
+    
+    if (competitors.length && product.rules) {
+      const calc = calculateBeatPrice(competitors, { ...product.rules, currentPrice: product.our_price });
       if (calc) {
         product.suggested_price = calc.suggestedPrice;
         product.lowest_competitor = calc.lowestCompetitor;
@@ -1065,7 +1085,7 @@ app.post('/api/tracker/products', requireAuth, async(req, res) => {
       ts: new Date().toISOString(),
       lowestPrice: serpData.lowestPrice,
       avgPrice: serpData.avgPrice,
-      competitors: (serpData.results || []).slice(0, 10).map(c => ({ source: c.source, platform: c.platform, price: c.priceTRY }))
+      competitors: competitors.slice(0, 10).map(c => ({ source: c.source, platform: c.platform, price: c.priceTRY }))
     }];
     
     // Supabase'e güncelle
