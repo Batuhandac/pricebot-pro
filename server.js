@@ -389,24 +389,53 @@ function groupSearchResults(results = [], query = '') {
     if (item.image && !variant.image) variant.image = item.image;
   }
 
-  // Convert to array
+  // Convert to array and sort intelligently
+  const qStr = query.toLowerCase().trim();
   const groups = Array.from(modelMap.values())
-    .map(g => ({
-      ...g,
-      lowestPrice: isFinite(g.lowestPrice) ? g.lowestPrice : 0,
-      highestPrice: g.highestPrice || 0,
-      image: g.images[0] || null,
-      variantCount: g.variants.size,
-      variants: Array.from(g.variants.entries()).map(([k, v]) => ({
-        key: k,
-        ...v,
-        lowestPrice: isFinite(v.lowestPrice) ? v.lowestPrice : 0,
-        itemCount: v.items.length
-      })),
-      sourceCount: new Set(g.items.map(x => x.source).filter(Boolean)).size,
-      platformCount: new Set(g.items.map(x => x.platform).filter(Boolean)).size
-    }))
-    .sort((a, b) => (a.lowestPrice || Infinity) - (b.lowestPrice || Infinity));
+    .map(g => {
+      // Sort items inside the group: New ones first, Refurbished/Used at the bottom, then by price
+      g.items.sort((a, b) => {
+        const aLow = a.name.toLowerCase();
+        const bLow = b.name.toLowerCase();
+        const aUsed = /yenilenmiş|teşhir|ikinci el|kullanılmış|hasarlı|defolu/i.test(aLow) ? 1 : 0;
+        const bUsed = /yenilenmiş|teşhir|ikinci el|kullanılmış|hasarlı|defolu/i.test(bLow) ? 1 : 0;
+        if (aUsed !== bUsed) return aUsed - bUsed;
+        return a.priceTRY - b.priceTRY;
+      });
+      // Recalculate lowest price strictly from the "New" items if possible, otherwise overall
+      const newItems = g.items.filter(x => !/yenilenmiş|teşhir|ikinci el|kullanılmış|hasarlı|defolu/i.test(x.name.toLowerCase()));
+      const displayLowest = newItems.length > 0 ? newItems[0].priceTRY : (g.items[0]?.priceTRY || 0);
+
+      // Score for group sorting
+      let score = 0;
+      const gName = g.displayName.toLowerCase();
+      if (gName === qStr || gName.includes(qStr) || qStr.includes(gName)) score += 1000;
+      score += g.items.length * 10; // More items = higher ranking
+
+      return {
+        ...g,
+        _score: score,
+        lowestPrice: isFinite(displayLowest) ? displayLowest : 0,
+        highestPrice: g.highestPrice || 0,
+        image: g.images[0] || null,
+        variantCount: g.variants.size,
+        variants: Array.from(g.variants.entries()).map(([k, v]) => {
+          v.items.sort((a,b) => a.priceTRY - b.priceTRY);
+          return {
+            key: k,
+            ...v,
+            lowestPrice: isFinite(v.items[0]?.priceTRY) ? v.items[0].priceTRY : 0,
+            itemCount: v.items.length
+          };
+        }),
+        sourceCount: new Set(g.items.map(x => x.source).filter(Boolean)).size,
+        platformCount: new Set(g.items.map(x => x.platform).filter(Boolean)).size
+      };
+    })
+    .sort((a, b) => {
+      if (b._score !== a._score) return b._score - a._score;
+      return (a.lowestPrice || Infinity) - (b.lowestPrice || Infinity);
+    });
 
   // Add accessories at the end if any
   if (accessoryGroup.items.length > 0) {
